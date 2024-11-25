@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"  
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres} 
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}  
+      POSTGRES_DB: ${DB_NAME:-tradeapi_db}  
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql  
+
+volumes:
+  postgres_data:  
