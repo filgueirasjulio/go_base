@@ -5,8 +5,8 @@ import (
 	"gorm.io/gorm"
 	"reflect"
 
-	"tradeapi/models"
-	"tradeapi/helpers"
+	"tradeapi/app/models"
+	"tradeapi/utils/helpers"
 )
 
 // RunMigrations executa todas as migrações dos models

@@ -25,17 +25,6 @@ func init() {
 	}
 }
 
-// @title TradeAPI
-// @version 1.0
-// @description API de exemplo para documentação com Swagger
-// @termsOfService http://swagger.io/terms/
-// @contact.name Suporte
-// @contact.url http://www.tradeapi.com/support
-// @contact.email suporte@tradeapi.com
-// @license.name MIT
-// @license.url http://opensource.org/licenses/MIT
-// @host localhost:3000
-// @BasePath /
 func main() {
 	cmd := &cli.App{
 		Name:        "Tradeapi",

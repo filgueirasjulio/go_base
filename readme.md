@@ -2,8 +2,6 @@
 
 ================
 
-API de exemplo para documentação com Swagger.
-
 ## Como Usar
 
 -------------
@@ -105,5 +103,9 @@ go build
 -   para visualizar documentação Swagger.
     ```
     http://localhost:8082/api/swagger
+    ```
+    gerar nova documentação
+    ```
+    swag init -o utils/docs
     ```
     

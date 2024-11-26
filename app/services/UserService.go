@@ -1,9 +1,9 @@
 package services
 
 import (
-	"tradeapi/repositories"
+	"tradeapi/app/repositories"
 	"gorm.io/gorm"
-	"tradeapi/models"
+	"tradeapi/app/models"
 )
 
 func GetAllUsers(db *gorm.DB) ([]models.User, error) {

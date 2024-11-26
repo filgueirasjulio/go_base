@@ -5,8 +5,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"tradeapi/services"
-	"tradeapi/resources"
+	"tradeapi/app/services"
+	"tradeapi/app/resources"
 )
 
 type UserController struct{

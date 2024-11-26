@@ -1,6 +1,6 @@
 package resources
 
-import "tradeapi/models"
+import "tradeapi/app/models"
 
 type UserResource struct {
 	ID        uint   `json:"id"`

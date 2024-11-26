@@ -2,7 +2,7 @@
 package repositories
 
 import (
-	"tradeapi/models"
+	"tradeapi/app/models"
 	"gorm.io/gorm"
 )
 

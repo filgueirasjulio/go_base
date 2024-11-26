@@ -1,22 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API de exemplo para documentação com Swagger",
-        "title": "TradeAPI",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "Suporte",
-            "url": "http://www.tradeapi.com/support",
-            "email": "suporte@tradeapi.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "http://opensource.org/licenses/MIT"
-        },
-        "version": "1.0"
+        "contact": {}
     },
-    "host": "localhost:3000",
-    "basePath": "/",
     "paths": {
         "/api/users": {
             "get": {
