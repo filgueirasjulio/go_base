@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
+	"log"
+	"os/signal"
+	"syscall"
 	"time"
 	"gorm.io/gorm"
 
@@ -115,16 +117,31 @@ func Teste() *gorm.DB {
 }
 
 func Run(db *gorm.DB) {
-	//fiber
+	// Crie uma instância do Fiber
 	app := fiber.New()
 
-	//rotas
+	// Defina rotas
 	routes.SetupAPIRoutes(app, db)
-	
+
+	// Defina porta
 	port := os.Getenv("APP_PORT")
 
-	fmt.Printf("Servidor rodando na porta %s...\n", port)
-	if err := app.Listen(":"+port); err != nil {
-		fmt.Println("Erro ao rodar o servidor:", err)
-	}
+	go func() {
+		fmt.Printf("Servidor rodando na porta %s...\n", port)
+		if err := app.Listen(":"+port); err != nil {
+			fmt.Println("Erro ao rodar o servidor:", err)
+		}
+	}()
+
+	// Aguarde sinal de interrupção
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	<-interrupt
+
+	if err := app.Shutdown(); err != nil {
+        fmt.Println("Erro ao encerrar servidor:", err)
+    }
+
+	fmt.Println("Servidor encerrado!")
 }
