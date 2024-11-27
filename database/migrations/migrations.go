@@ -19,46 +19,63 @@ func NewMigration(db *gorm.DB) *Migration {
 
 // RunMigrations executa todas as migrações dos models
 func (m *Migration) RunMigrations() {
+	models := getModels()
+    migrated := m.checkAndMigrateTablesAndColumns(models)
 
-	migrated := checkAndMigrateTableAndColumns(m.DB, &models.User{}) 
-
-	// Verifica se não houve migração executada
-	if !migrated {
-		log.Println("Nada para migrar.")
-	}
+    if !migrated {
+        log.Println("Nada para migrar.")
+    }
 }
 
 // checkAndMigrateTableAndColumns verifica se a tabela e as colunas de um modelo existem no banco de dados e faz as migrações necessárias
-func checkAndMigrateTableAndColumns(db *gorm.DB, model interface{}) bool {
-	migrated := false
-	modelType := reflect.TypeOf(model).Elem() // Obtém o tipo do struct 
+func (m *Migration) checkAndMigrateTablesAndColumns(models []interface{}) bool {
+    migrated := false
+    for _, model := range models {
+		if model == nil {
+            log.Println("Modelo nulo")
+            continue
+        }
 
-	// Verifica se a tabela existe
-	tableExists := db.Migrator().HasTable(model)
-	if !tableExists {
-		log.Printf("Criando tabela para o modelo '%s'.", modelType.Name())
-		db.AutoMigrate(model) // Cria a tabela
-		migrated = true
-	} else {
-		for i := 0; i < modelType.NumField(); i++ {
-			field := modelType.Field(i)
-			jsonTag := field.Tag.Get("json")
-			columnName := helpers.ExtractJSONTag(jsonTag)
+        if m.DB == nil {
+            log.Fatal("Banco de dados não inicializado")
+            return false
+        }
 
-			// Ignorar campos sem a tag json ou que estão marcados para ignorar (json:"-")
-			if columnName == "" || columnName == "-" {
-				continue
-			}
+        modelType := reflect.TypeOf(model) // Obtém o tipo do struct
 
-			// Verifica se a coluna existe
-			if !db.Migrator().HasColumn(model, columnName) {
-				log.Printf("Adicionando coluna '%s' à tabela '%s'.", columnName, modelType.Name())
-				db.Migrator().AddColumn(model, columnName) 
-				migrated = true
-			}
-		}
-	}
+        // Verifica se a tabela existe
+        tableExists := m.DB.Migrator().HasTable(model)
+        if !tableExists {
+            log.Printf("Criando tabela para o modelo '%s'.", modelType.Name())
+            m.DB.AutoMigrate(model) // Cria a tabela
+            migrated = true
+        } else {
+            for i := 0; i < modelType.NumField(); i++ {
+                field := modelType.Field(i)
+                jsonTag := field.Tag.Get("json")
+                columnName := helpers.ExtractJSONTag(jsonTag)
 
-	return migrated
+                // Ignorar campos sem a tag json ou que estão marcados para ignorar (json:"-")
+                if columnName == "" || columnName == "-" {
+                    continue
+                }
+
+                // Verifica se a coluna existe
+                if !m.DB.Migrator().HasColumn(model, columnName) {
+                    log.Printf("Adicionando coluna '%s' à tabela '%s'.", columnName, modelType.Name())
+                    m.DB.Migrator().AddColumn(model, columnName)
+                    migrated = true
+                }
+            }
+        }
+    }
+
+    return migrated
 }
 
+func getModels() []interface{} {
+    return []interface{}{
+        models.User{},
+        models.ValidationCode{},
+    }
+}

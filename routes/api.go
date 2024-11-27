@@ -35,22 +35,19 @@ func (r *Route) SetupAPIRoutes() {
 
 	api := r.App.Group("/api")
 
+	/*documentação*/
 	api.Get("/swagger/*", fiberSwagger.New())
+
+	/*autenticação*/
+	authController := controllers.NewAuthController(controllerBase)
+	auth := api.Group("/auth/")
+	
+	auth.Post("/register", authController.Register)
+	auth.Post("/send-verification-code", authController.SendVerificationCode)
 
 	/*usuários*/
 	userController := controllers.NewUserController(controllerBase)
 	users := api.Group("/users")
 
 	users.Get("/", userController.Index)
-
-	/*autenticação*/
-	authController := controllers.NewAuthController(controllerBase)
-	auth := api.Group("/auth/")
-
-	auth.Post("/register", authController.Register)
-
-	//listar rotas
-	r.App.Get("/routes", func(c *fiber.Ctx) error {
-		return c.JSON(r.App.Stack())
-	})
 }

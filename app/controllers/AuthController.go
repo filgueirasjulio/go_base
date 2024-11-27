@@ -3,14 +3,14 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"tradeapi/utils/helpers"
 	"tradeapi/app/requests"
 	"tradeapi/app/resources"
 	"tradeapi/app/services"
+	"tradeapi/utils/helpers"
 )
 
 type AuthController struct {
-	controller *Controller
+	controller  *Controller
 	authService *services.AuthService
 }
 
@@ -54,4 +54,19 @@ func (ac *AuthController) Register(c *fiber.Ctx) error {
 		"message": "Usuário registrado com sucesso!",
 		"data":    resources.Transform(user),
 	})
+}
+
+// envio de códgio para validação do cadastro de usuário
+func (ac *AuthController) SendVerificationCode(c *fiber.Ctx) error {
+
+	var dados map[string]string
+	err := c.BodyParser(&dados)
+	userID := dados["user_id"]
+
+	err = ac.authService.SendVerificationCodeEmail(userID)
+	if err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+	}
+
+	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso")
 }

@@ -6,12 +6,11 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"strconv"
 	"time"
 	"tradeapi/connections"
+	queue "tradeapi/app"
 	
-	seeds "tradeapi/database/seeds"
-	migrations "tradeapi/database/migrations"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
@@ -32,6 +31,11 @@ func init() {
 	if err != nil {
 		log.Fatal("Erro ao carregar arquivo .env:", err)
 	}
+
+	//iniciar fila
+	capacity, _ := strconv.Atoi(os.Getenv("QUEUE_CAPACITY"))
+	log.Println(capacity)
+	queue.InitQueue(capacity)
 }
 
 func main() {
@@ -47,7 +51,7 @@ func main() {
 				Usage: "Executando em modo padrão",
 				Action: func(ctx *cli.Context) error {
 					// Conectar ao banco e rodar o serviço
-					app, err := Teste(app)
+					app, err := Teste(app, ctx, "run")
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
@@ -60,7 +64,7 @@ func main() {
 				Name:  "test",
 				Usage: "Executando teste de conexão",
 				Action: func(ctx *cli.Context) error {
-					_, err := Teste(app)			
+					_, err := Teste(app, ctx, "test")			
 					if err != nil {
 						log.Fatal("Falha no teste de conexão:", err)
 					}
@@ -73,14 +77,12 @@ func main() {
 				Name:  "migrate",
 				Usage: "Executar as migrations",
 				Action: func(ctx *cli.Context) error {
-					_, err := Teste(app)
+					_, err := Teste(app, ctx, "migrate")
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
 
-					var migration *migrations.Migration
-
-					migration.RunMigrations()
+					log.Println("Conexão com o banco de dados foi bem-sucedida!")
 					return nil
 				},
 			},
@@ -95,24 +97,12 @@ func main() {
 						Required: false,
 					},
 				},
-				Action: func(c *cli.Context) error {
+				Action: func(ctx *cli.Context) error {
 					// Estabelecendo a conexão com o banco
-					_, err := Teste(app)
+					_, err := Teste(app, ctx, "seed")
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
-
-					var seeds *seeds.Seeder
-
-					// Verifica qual modelo foi passado na flag
-					model := c.String("model")
-					if model == "" {
-						log.Println("Rodando todas as seeders...")
-						seeds.RunAllSeeds()
-					} else {
-						seeds.RunModelSeed(model)
-					}
-
 					return nil
 				},
 			},
@@ -125,8 +115,8 @@ func main() {
 	cmd.Run(os.Args)
 }
 
-func Teste(app *fiber.App) (*fiber.App,  error) {
-	err := connections.GetDatabaseConnection(app)
+func Teste(app *fiber.App, c *cli.Context, cmdType string) (*fiber.App,  error) {
+	err := connections.GetDatabaseConnection(app, c, cmdType)
 	if err != nil {
 		log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 	}
@@ -151,10 +141,15 @@ func Run(app *fiber.App) {
 
 	<-interrupt
 
-	if err := app.Shutdown(); err != nil {
+	if err := app.Shutdown(); 
+	err != nil {
         log.Fatal("Erro ao encerrar servidor:", err)
 		return 
     }
+
+	//encerrando a fila
+	queue.GetQueue().Close()
+    queue.GetQueue().Wait()
 
 	fmt.Println("Servidor encerrado!")
 }
