@@ -10,7 +10,7 @@ type UserResource struct {
 }
 
 // Transform transforma um modelo User em um UserResource
-func Transform(user models.User) UserResource {
+func Transform(user *models.User) UserResource {
 	return UserResource{
 		ID:        user.ID,
 		Name:      user.Name,
@@ -20,7 +20,7 @@ func Transform(user models.User) UserResource {
 }
 
 // TransformCollection transforma uma lista de modelos User em uma lista de UserResource
-func TransformCollection(users []models.User) []UserResource {
+func TransformCollection(users []*models.User) []UserResource {
 	resources := make([]UserResource, len(users))
 	for i, user := range users {
 		resources[i] = Transform(user)

@@ -18,7 +18,6 @@ func FactoryUser(db *gorm.DB, quantity int) ([]models.User, error) {
 			Name:  faker.Name(),
 			Email: faker.Email(),
 			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("senha123"), bcrypt.DefaultCost)

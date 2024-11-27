@@ -1,12 +1,22 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
-    _ "tradeapi/utils/docs" 
 	"tradeapi/app/controllers"
+	_ "tradeapi/utils/docs"
+
+	"github.com/gofiber/fiber/v2"
 	fiberSwagger "github.com/gofiber/swagger"
+	"gorm.io/gorm"
 )
+
+type Route struct {
+	App *fiber.App
+	DB  *gorm.DB
+}
+
+func NewRoute(db *gorm.DB, app *fiber.App) *Route {
+	return &Route{App: app, DB: db}
+}
 
 // @title TradeAPI
 // @version 1.0
@@ -20,15 +30,27 @@ import (
 // @host localhost:3000
 // @BasePath /
 // SetupAPIRoutes configura as rotas da API
-func SetupAPIRoutes(app *fiber.App, db *gorm.DB) {
+func (r *Route) SetupAPIRoutes() {
+	controllerBase := controllers.NewController(r.DB)
 
-	api := app.Group("/api")
+	api := r.App.Group("/api")
 
 	api.Get("/swagger/*", fiberSwagger.New())
 
 	/*usuários*/
-	userController := controllers.NewUserController(db)
+	userController := controllers.NewUserController(controllerBase)
 	users := api.Group("/users")
 
 	users.Get("/", userController.Index)
+
+	/*autenticação*/
+	authController := controllers.NewAuthController(controllerBase)
+	auth := api.Group("/auth/")
+
+	auth.Post("/register", authController.Register)
+
+	//listar rotas
+	r.App.Get("/routes", func(c *fiber.Ctx) error {
+		return c.JSON(r.App.Stack())
+	})
 }

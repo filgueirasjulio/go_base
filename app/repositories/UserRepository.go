@@ -1,4 +1,3 @@
-// repositories/userRepository.go
 package repositories
 
 import (
@@ -6,11 +5,19 @@ import (
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB 
+type UserRepository struct {
+	db *gorm.DB
+}
 
-func GetAllUsers(db *gorm.DB) ([]models.User, error) {
-	var users []models.User
-	err := db.Find(&users).Error
+// Construtor para UserRepository
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
+}
+
+// Método para obter todos os usuários
+func (r *UserRepository) GetAllUsers() ([]*models.User, error) {
+	var users []*models.User
+	err := r.db.Find(&users).Error
 	if err != nil {
 		return nil, err
 	}

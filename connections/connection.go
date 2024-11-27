@@ -1,15 +1,23 @@
 package connections
 
 import (
+	"fmt"
+	"os"
+	"tradeapi/database/migrations"
+	"tradeapi/database/seeds"
+	"tradeapi/routes"
+
+	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"fmt"
-	"log"
-	"os"
 )
 
+type DB struct {
+	*gorm.DB
+}
+
 // GetDatabaseConnection cria e retorna uma conexão com o banco de dados usando o GORM
-func GetDatabaseConnection() (*gorm.DB, error) {
+func GetDatabaseConnection(app *fiber.App) (error) {
 	// Obter configurações do ambiente
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
@@ -23,21 +31,26 @@ func GetDatabaseConnection() (*gorm.DB, error) {
 	// Cria a conexão 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("erro ao conectar ao banco de dados: %v", err)
+		return fmt.Errorf("erro ao conectar ao banco de dados: %v", err)
 	}
 
 	// Testar a conexão (sem Ping)
 	sqlDB, err := db.DB() 
 	if err != nil {
-		return nil, fmt.Errorf("erro ao obter DB do GORM: %v", err)
+		return fmt.Errorf("erro ao obter DB do GORM: %v", err)
 	}
 
 	// Testa a conexão com o banco
 	if err = sqlDB.Ping(); err != nil {
-		return nil, fmt.Errorf("erro ao verificar conexão com o banco de dados: %v", err)
+		return  fmt.Errorf("erro ao verificar conexão com o banco de dados: %v", err)
 	}
 
-	log.Println("Conexão com o banco de dados foi bem-sucedida!")
-	return db, nil
+	r := routes.NewRoute(db, app)
+	r.SetupAPIRoutes()
+
+	seeds.NewSeeder(db)
+	migrations.NewMigration(db)
+
+	return  nil
 }
 

@@ -7,19 +7,26 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"gorm.io/gorm"
-
 	"tradeapi/connections"
-	"tradeapi/routes"
+	
 	seeds "tradeapi/database/seeds"
 	migrations "tradeapi/database/migrations"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
+
+var app *fiber.App
+
 func init() {
+	app = fiber.New()
+	app.Use(logger.New())
+	app.Use(recover.New())
+
 	// Carrega as variáveis do arquivo .env
 	err := godotenv.Load()
 	if err != nil {
@@ -40,9 +47,12 @@ func main() {
 				Usage: "Executando em modo padrão",
 				Action: func(ctx *cli.Context) error {
 					// Conectar ao banco e rodar o serviço
-					db := Teste()
+					app, err := Teste(app)
+					if err != nil {
+						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+					}
 
-					Run(db)
+					Run(app)
 					return nil
 				},
 			},
@@ -50,12 +60,12 @@ func main() {
 				Name:  "test",
 				Usage: "Executando teste de conexão",
 				Action: func(ctx *cli.Context) error {
-					err := Teste()			
+					_, err := Teste(app)			
 					if err != nil {
-						fmt.Println("Falha no teste de conexão:", err)
+						log.Fatal("Falha no teste de conexão:", err)
 					}
 
-					fmt.Println("Teste de conexão bem-sucedido!")
+					log.Println("Conexão com o banco de dados foi bem-sucedida!")
 					return nil
 				},
 			},
@@ -63,9 +73,14 @@ func main() {
 				Name:  "migrate",
 				Usage: "Executar as migrations",
 				Action: func(ctx *cli.Context) error {
-					db := Teste()
+					_, err := Teste(app)
+					if err != nil {
+						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+					}
 
-					migrations.RunMigrations(db)
+					var migration *migrations.Migration
+
+					migration.RunMigrations()
 					return nil
 				},
 			},
@@ -82,18 +97,20 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					// Estabelecendo a conexão com o banco
-					db, err := connections.GetDatabaseConnection()
+					_, err := Teste(app)
 					if err != nil {
-						log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
+						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
+
+					var seeds *seeds.Seeder
 
 					// Verifica qual modelo foi passado na flag
 					model := c.String("model")
 					if model == "" {
 						log.Println("Rodando todas as seeders...")
-						seeds.RunAllSeeds(db)
+						seeds.RunAllSeeds()
 					} else {
-						seeds.RunModelSeed(db, model)
+						seeds.RunModelSeed(model)
 					}
 
 					return nil
@@ -108,28 +125,23 @@ func main() {
 	cmd.Run(os.Args)
 }
 
-func Teste() *gorm.DB {
-	db, err := connections.GetDatabaseConnection()
+func Teste(app *fiber.App) (*fiber.App,  error) {
+	err := connections.GetDatabaseConnection(app)
 	if err != nil {
-		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
+		log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 	}
-	return db
+	return app, err
 }
 
-func Run(db *gorm.DB) {
-	// Crie uma instância do Fiber
-	app := fiber.New()
-
-	// Defina rotas
-	routes.SetupAPIRoutes(app, db)
-
+func Run(app *fiber.App) {
 	// Defina porta
 	port := os.Getenv("APP_PORT")
 
 	go func() {
 		fmt.Printf("Servidor rodando na porta %s...\n", port)
 		if err := app.Listen(":"+port); err != nil {
-			fmt.Println("Erro ao rodar o servidor:", err)
+			log.Fatal("Erro ao rodar o servidor:", err)
+			return
 		}
 	}()
 
@@ -140,7 +152,8 @@ func Run(db *gorm.DB) {
 	<-interrupt
 
 	if err := app.Shutdown(); err != nil {
-        fmt.Println("Erro ao encerrar servidor:", err)
+        log.Fatal("Erro ao encerrar servidor:", err)
+		return 
     }
 
 	fmt.Println("Servidor encerrado!")

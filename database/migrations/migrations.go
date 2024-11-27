@@ -9,10 +9,18 @@ import (
 	"tradeapi/utils/helpers"
 )
 
-// RunMigrations executa todas as migrações dos models
-func RunMigrations(db *gorm.DB) {
+type Migration struct {
+	DB *gorm.DB
+}
 
-	migrated := checkAndMigrateTableAndColumns(db, &models.User{}) 
+func NewMigration(db *gorm.DB) *Migration {
+	return &Migration{DB: db}
+}
+
+// RunMigrations executa todas as migrações dos models
+func (m *Migration) RunMigrations() {
+
+	migrated := checkAndMigrateTableAndColumns(m.DB, &models.User{}) 
 
 	// Verifica se não houve migração executada
 	if !migrated {
