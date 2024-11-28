@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"reflect"
 	"tradeapi/app/models"
 
 	"github.com/go-playground/validator/v10"
@@ -8,9 +9,10 @@ import (
 )
 
 type RegisterRequest struct {
-	Name     string `json:"name" validate:"required,min=3"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+	Name            string `json:"name" validate:"required,min=3"`
+	Email           string `json:"email" validate:"required,email"`
+	Password        string `json:"password" validate:"required,min=6"`
+	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=Password"`
 }
 
 type RegisterRequestInternal struct {
@@ -28,7 +30,12 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
 
 	if err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
-			validationErrors[err.Field()] = getErrorMessage(err)
+			field := err.Field()
+			jsonTag, ok := r.GetJSONTag(field)
+			if ok {
+				field = jsonTag
+			}
+			validationErrors[field] = getErrorMessage(err)
 		}
 	}
 
@@ -38,12 +45,25 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
 
 	if len(validationErrors) > 0 {
 		return map[string]interface{}{
-			"erro":     "validação",
-			"detalhes": validationErrors,
+			"error":     "validação",
+			"details": validationErrors,
 		}
 	}
 
 	return nil
+}
+
+func (r *RegisterRequestInternal) GetJSONTag(field string) (string, bool) {
+	rv := reflect.ValueOf(r.RegisterRequest)
+	for i := 0; i < rv.NumField(); i++ {
+		if rv.Type().Field(i).Name == field {
+			tag := rv.Type().Field(i).Tag.Get("json")
+			if tag != "" {
+				return tag, true
+			}
+		}
+	}
+	return "", false
 }
 
 func (r *RegisterRequestInternal) ValidateEmailUniqueness() bool {
@@ -61,6 +81,8 @@ func getErrorMessage(err validator.FieldError) string {
 		return "Deve ser um e-mail válido"
 	case "min":
 		return "Deve ter pelo menos " + err.Param() + " caracteres"
+	case "eqfield":
+		return "Deve ser igual a " + err.Param()
 	default:
 		return "Entrada inválida"
 	}
