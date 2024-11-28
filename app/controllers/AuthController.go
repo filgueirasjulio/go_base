@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 
 	"tradeapi/app/requests"
@@ -57,16 +59,35 @@ func (ac *AuthController) Register(c *fiber.Ctx) error {
 }
 
 // envio de códgio para validação do cadastro de usuário
-func (ac *AuthController) SendVerificationCode(c *fiber.Ctx) error {
+func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 	var dados map[string]string
 	err := c.BodyParser(&dados)
 	userID := dados["user_id"]
 
-	err = ac.authService.SendVerificationCodeEmail(userID)
+	err = ac.authService.SendValidationCodeEmail(userID)
 	if err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso")
+}
+
+func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
+    var dados map[string]string
+    err := c.BodyParser(&dados)
+    userID := dados["user_id"]
+    code := dados["code"]
+
+    token, status, err := ac.authService.VerifyValidationCode(c, userID, code)
+    if err != nil {
+        log.Println("Erro no serviço:", err)
+        return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+    }
+    // Log do token antes de retornar
+    log.Println("Token gerado:", token)
+
+    return c.Status(status).JSON(fiber.Map{
+        "token": token,
+    })
 }

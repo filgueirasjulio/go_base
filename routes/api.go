@@ -2,6 +2,7 @@ package routes
 
 import (
 	"tradeapi/app/controllers"
+	"tradeapi/config"
 	_ "tradeapi/utils/docs"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +15,7 @@ type Route struct {
 	DB  *gorm.DB
 }
 
+// NewRoute cria uma nova instância de rotas com a aplicação e o banco de dados
 func NewRoute(db *gorm.DB, app *fiber.App) *Route {
 	return &Route{App: app, DB: db}
 }
@@ -29,25 +31,32 @@ func NewRoute(db *gorm.DB, app *fiber.App) *Route {
 // @license.url http://opensource.org/licenses/MIT
 // @host localhost:3000
 // @BasePath /
+
 // SetupAPIRoutes configura as rotas da API
 func (r *Route) SetupAPIRoutes() {
+	// Inicializa o controller base com o banco de dados
 	controllerBase := controllers.NewController(r.DB)
 
+	// Define o prefixo da API
 	api := r.App.Group("/api")
 
-	/*documentação*/
+	/* Documentação com Swagger */
 	api.Get("/swagger/*", fiberSwagger.New())
 
-	/*autenticação*/
+	/* Rotas de autenticação */
 	authController := controllers.NewAuthController(controllerBase)
 	auth := api.Group("/auth/")
-	
-	auth.Post("/register", authController.Register)
-	auth.Post("/send-verification-code", authController.SendVerificationCode)
+	{
+		auth.Post("/register", authController.Register)
+		auth.Post("/send-validation-code", authController.SendValidationCode)
+		auth.Post("/verify-validation-code", authController.VerifyValidationCode)
+	}
 
-	/*usuários*/
+	/* Rotas de usuários */
 	userController := controllers.NewUserController(controllerBase)
 	users := api.Group("/users")
-
-	users.Get("/", userController.Index)
+	users.Use(config.Middleware(r.DB)) 
+	{
+		users.Get("/", userController.Index)
+	}
 }
