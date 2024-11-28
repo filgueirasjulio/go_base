@@ -77,5 +77,6 @@ func getModels() []interface{} {
     return []interface{}{
         models.User{},
         models.ValidationCode{},
+        models.RegisterHash{},
     }
 }

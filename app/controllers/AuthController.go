@@ -1,8 +1,7 @@
 package controllers
 
 import (
-	"log"
-
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
 	"tradeapi/app/requests"
@@ -23,31 +22,26 @@ func NewAuthController(controller *Controller) *AuthController {
 	}
 }
 
-// @Summary Registrar usuário
-// @Description Cria um novo usuário
+// @Summary Registrar usuário (Step 1)
+// @Description Cria um novo usuário sem senha
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param req body requests.RegisterRequest true "Dados do usuário"
+// @Param req body requests.RegisterRequestStep1 true "Dados do usuário"
 // @Success 201 {object} resources.UserResource "Usuário registrado"
-// @Router /api/register [post]
-func (ac *AuthController) Register(c *fiber.Ctx) error {
+// @Router /api/register/step1 [post]
+func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 	req := requests.NewRegisterRequest(ac.controller.DB)
-	if req.DB == nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "DB não inicializado")
-	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.BodyParser(&req.RegisterRequestStep1); err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, "Falha ao processar requisição")
 	}
 
-	errMsg := req.Validate()
-	if errMsg != nil {
-		helpers.ErrorResponse(c, fiber.StatusUnprocessableEntity, errMsg)
-		return nil
+	if err := validator.New().Struct(req.RegisterRequestStep1); err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, "Falha ao iniciar o step 1")
 	}
 
-	user, err := ac.authService.RegisterUser(*req)
+	user, err := ac.authService.RegisterUserStep1(req.RegisterRequestStep1)
 	if err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao registrar o usuário")
 	}
@@ -58,14 +52,45 @@ func (ac *AuthController) Register(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Registrar usuário (Step 2)
+// @Description Define a senha do usuário
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param req body requests.RegisterRequestStep2 true "Dados do usuário"
+// @Success 200 {object} resources.UserResource "Senha definida"
+// @Router /api/register/step2 [post]
+func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
+    req := requests.NewRegisterRequest(ac.controller.DB)
+
+    if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
+        return helpers.ErrorResponseString(c, fiber.StatusBadRequest, "Falha ao processar requisição")
+    }
+
+    if err := validator.New().Struct(req.RegisterRequestStep2); err != nil {
+        return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, "Falha ao iniciar o step 2")
+    }
+
+    response, status, err := ac.authService.RegisterUserStep2(req.RegisterRequestStep2)
+    if err != nil {
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "message": "Senha definida com sucesso!",
+		"token": response.Token,
+        "data":    resources.Transform(response.User),
+    })
+}
+
 // envio de códgio para validação do cadastro de usuário
 func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 	var dados map[string]string
 	err := c.BodyParser(&dados)
-	userID := dados["user_id"]
+	email := dados["email"]
 
-	err = ac.authService.SendValidationCodeEmail(userID)
+	err = ac.authService.SendValidationCodeEmail(email)
 	if err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
 	}
@@ -74,20 +99,17 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 }
 
 func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
-    var dados map[string]string
-    err := c.BodyParser(&dados)
-    userID := dados["user_id"]
-    code := dados["code"]
+	var dados map[string]string
+	err := c.BodyParser(&dados)
+	email := dados["email"]
+	code := dados["code"]
 
-    token, status, err := ac.authService.VerifyValidationCode(c, userID, code)
-    if err != nil {
-        log.Println("Erro no serviço:", err)
-        return c.Status(status).JSON(fiber.Map{"error": err.Error()})
-    }
-    // Log do token antes de retornar
-    log.Println("Token gerado:", token)
+	hash, status, err := ac.authService.VerifyValidationCode(c, email, code)
+	if err != nil {
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+	}
 
-    return c.Status(status).JSON(fiber.Map{
-        "token": token,
-    })
+	return c.Status(status).JSON(fiber.Map{
+		"hash": hash,
+	})
 }

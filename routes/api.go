@@ -47,7 +47,8 @@ func (r *Route) SetupAPIRoutes() {
 	authController := controllers.NewAuthController(controllerBase)
 	auth := api.Group("/auth/")
 	{
-		auth.Post("/register", authController.Register)
+		auth.Post("/register_step_1", authController.RegisterStep1)
+		auth.Post("/register_step_2", authController.RegisterStep2)
 		auth.Post("/send-validation-code", authController.SendValidationCode)
 		auth.Post("/verify-validation-code", authController.VerifyValidationCode)
 	}

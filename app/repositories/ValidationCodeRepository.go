@@ -16,9 +16,9 @@ func NewValidationCodeRepository(db *gorm.DB) *ValidationCodeRepository {
 }
 
 // Obtem o último código de validação gerado pelo usuário
-func (r *ValidationCodeRepository) GetLastCodeByUserId(id string) (*models.ValidationCode, error) {
+func (r *ValidationCodeRepository) GetLastCodeByUserEmail(email string) (*models.ValidationCode, error) {
     var code models.ValidationCode
-    result := r.db.Where("user_id = ?", id).Order("created_at DESC").First(&code)
+    result := r.db.Where("user_email = ?", email).Order("created_at DESC").First(&code)
     if result.Error != nil {
         if result.Error == gorm.ErrRecordNotFound {
             return nil, nil
@@ -45,4 +45,8 @@ func (r *ValidationCodeRepository) MarkAsValidated(validationCode *models.Valida
         return fmt.Errorf("erro ao marcar o código como validado: %w", result.Error)
     }
     return nil
+}
+
+func (r *ValidationCodeRepository) DeleteCodeByUserEmail(email string) error {
+    return r.db.Where("user_email = ?", email).Delete(&models.ValidationCode{}).Error
 }
