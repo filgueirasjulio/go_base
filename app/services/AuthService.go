@@ -126,10 +126,6 @@ func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (
         return nil, 404, errors.New("usuário não encontrado")
     }
 
-    if user.Password != "" {
-        return nil, 404, errors.New("senha já definida")
-    }
-
     // Cria o hash da senha
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
     if err != nil {
@@ -138,6 +134,8 @@ func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (
 
     // Atualiza a senha do usuário
     user.Password = string(hashedPassword)
+    // Marca como ativo no sistema
+    user.IsActive = true
 
     // Salva as alterações
     _, err = s.authRepo.Update(user)
@@ -177,7 +175,7 @@ func (s *AuthService) SendValidationCodeEmail(email string) error {
 		return errors.New("falha ao registrar código de validação")
 	}
 
-	mail.NewValidationCodeMail(user.Email, user.Name, validationCode.Code)
+	mail.NewValidationCodeMail(user.Email, user.Name, validationCode.Code, user.IsActive,)
 
 	return nil
 }

@@ -55,6 +55,7 @@ func (r *Route) SetupAPIRoutes() {
 		auth.Use(config.Middleware(r.DB))
 		{
 			auth.Get("/logout", authController.Logout)
+			auth.Post("/change-password", authController.RegisterStep2)
 		}
 	}
 

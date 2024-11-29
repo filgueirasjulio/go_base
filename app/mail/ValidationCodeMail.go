@@ -20,14 +20,22 @@ type ValidationMailData struct {
 }
 
 // NewValidationCodeMail cria um novo e-mail de código de validação
-func NewValidationCodeMail(to, nome, codigo string) *Mail {
+func NewValidationCodeMail(to, nome, codigo string, isActive bool) *Mail {
 	data := ValidationMailData{
 		Nome:   nome,
 		Codigo: codigo,
 		Ano:    time.Now().Year(),
 	}
 
-	tmpl, err := template.ParseFiles("templates/mails/validation_code_register_mail.html")
+	var tmplPath string
+
+	if !isActive {
+		tmplPath = "templates/mails/validation_code_register_mail.html"
+	} else {
+		tmplPath = "templates/mails/validation_code_change_password_mail.html"
+	}
+
+	tmpl, err := template.ParseFiles(tmplPath)
 	if err != nil {
 		panic(err)
 	}

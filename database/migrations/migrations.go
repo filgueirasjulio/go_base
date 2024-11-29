@@ -31,45 +31,38 @@ func (m *Migration) RunMigrations() {
 func (m *Migration) checkAndMigrateTablesAndColumns(models []interface{}) bool {
     migrated := false
     for _, model := range models {
-		if model == nil {
-            log.Println("Modelo nulo")
-            continue
-        }
-
-        if m.DB == nil {
-            log.Fatal("Banco de dados não inicializado")
-            return false
-        }
-
-        modelType := reflect.TypeOf(model) // Obtém o tipo do struct
-
+        modelType := reflect.TypeOf(model)
+        tableName := modelType.Name()
+        
         // Verifica se a tabela existe
-        tableExists := m.DB.Migrator().HasTable(model)
-        if !tableExists {
-            log.Printf("Criando tabela para o modelo '%s'.", modelType.Name())
-            m.DB.AutoMigrate(model) // Cria a tabela
+        if !m.DB.Migrator().HasTable(model) {
+            m.DB.AutoMigrate(model)
             migrated = true
         } else {
             for i := 0; i < modelType.NumField(); i++ {
                 field := modelType.Field(i)
+                gormTag := field.Tag.Get("gorm")
                 jsonTag := field.Tag.Get("json")
-                columnName := helpers.ExtractJSONTag(jsonTag)
-
-                // Ignorar campos sem a tag json ou que estão marcados para ignorar (json:"-")
-                if columnName == "" || columnName == "-" {
+                
+                // Ignora campos ignorados pelo GORM
+                if gormTag == "-" || jsonTag == "-" {
                     continue
                 }
-
+                
+                // Extrai nome da coluna
+                columnName := helpers.ExtractJSONTag(jsonTag)
+                if columnName == "" {
+                    columnName = field.Name
+                }
+                
                 // Verifica se a coluna existe
-                if !m.DB.Migrator().HasColumn(model, columnName) {
-                    log.Printf("Adicionando coluna '%s' à tabela '%s'.", columnName, modelType.Name())
-                    m.DB.Migrator().AddColumn(model, columnName)
+                if !m.DB.Migrator().HasColumn(tableName, columnName) {
+                    m.DB.Migrator().AddColumn(tableName, columnName)
                     migrated = true
                 }
             }
         }
     }
-
     return migrated
 }
 

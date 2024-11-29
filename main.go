@@ -34,7 +34,7 @@ func init() {
 
 	//iniciar fila
 	capacity, _ := strconv.Atoi(os.Getenv("QUEUE_CAPACITY"))
-	log.Println(capacity)
+
 	queue.InitQueue(capacity)
 }
 
