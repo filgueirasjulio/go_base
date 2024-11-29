@@ -15,7 +15,64 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/register/step1": {
+        "/api/auth/login": {
+            "post": {
+                "description": "Realiza login de usuário",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logar usuário",
+                "parameters": [
+                    {
+                        "description": "Dados do usuário",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginRequestParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Resposta de login",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.TokenResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "get": {
+                "description": "Desloga o usuário atual",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Deslogar usuário",
+                "responses": {
+                    "200": {
+                        "description": "Usuário deslogado com sucesso",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/register_step1": {
             "post": {
                 "description": "Cria um novo usuário sem senha",
                 "consumes": [
@@ -35,7 +92,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/requests.RegisterRequestStep1"
+                            "$ref": "#/definitions/auth.RegisterRequestStep1"
                         }
                     }
                 ],
@@ -49,7 +106,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/register/step2": {
+        "/api/auth/register_step2": {
             "post": {
                 "description": "Define a senha do usuário",
                 "consumes": [
@@ -69,7 +126,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/requests.RegisterRequestStep2"
+                            "$ref": "#/definitions/auth.RegisterRequestStep2"
                         }
                     }
                 ],
@@ -83,7 +140,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/send-validation-code": {
+        "/api/auth/send-validation-code": {
             "post": {
                 "description": "Envia código de validação para o e-mail fornecido.",
                 "tags": [
@@ -92,12 +149,12 @@ const docTemplate = `{
                 "summary": "Envia código de validação",
                 "parameters": [
                     {
-                        "description": "E-mail do usuário",
-                        "name": "email",
+                        "description": "e-mail",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/auth.ValidationCodeRequestParams"
                         }
                     }
                 ],
@@ -109,6 +166,43 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/verify-validation-code": {
+            "post": {
+                "description": "Verifica se o código de validação é válido.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verifica código de validação",
+                "parameters": [
+                    {
+                        "description": "E-mail do usuário",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "email, code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.VerifyCodeRequestParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Código validado com sucesso",
+                        "schema": {
+                            "type": "object"
                         }
                     }
                 }
@@ -133,49 +227,100 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/api/verify-validation-code": {
-            "post": {
-                "description": "Verifica se o código de validação é válido.",
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Verifica código de validação",
-                "parameters": [
-                    {
-                        "description": "E-mail do usuário",
-                        "name": "email",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Código de validação",
-                        "name": "code",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Código válido",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
+        "auth.LoginRequestParams": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "joao@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "senha123"
+                }
+            }
+        },
+        "auth.RegisterRequestStep1": {
+            "type": "object",
+            "required": [
+                "email",
+                "name"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "joao@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "João Silva"
+                }
+            }
+        },
+        "auth.RegisterRequestStep2": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "hash",
+                "password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string",
+                    "example": "senha123"
+                },
+                "hash": {
+                    "type": "string",
+                    "example": "72fd3951e5bd758b7619ddc62af1f052"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "senha123"
+                }
+            }
+        },
+        "auth.ValidationCodeRequestParams": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "joao@example.com"
+                }
+            }
+        },
+        "auth.VerifyCodeRequestParams": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "joao@example.com"
+                }
+            }
+        },
+        "controllers.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "models.User": {
             "type": "object",
             "properties": {
@@ -199,47 +344,6 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
-                }
-            }
-        },
-        "requests.RegisterRequestStep1": {
-            "type": "object",
-            "required": [
-                "email",
-                "name"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "joao@example.com"
-                },
-                "name": {
-                    "type": "string",
-                    "minLength": 3,
-                    "example": "João Silva"
-                }
-            }
-        },
-        "requests.RegisterRequestStep2": {
-            "type": "object",
-            "required": [
-                "confirm_password",
-                "hash",
-                "password"
-            ],
-            "properties": {
-                "confirm_password": {
-                    "type": "string",
-                    "example": "senha123"
-                },
-                "hash": {
-                    "type": "string",
-                    "example": "72fd3951e5bd758b7619ddc62af1f052"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6,
-                    "example": "senha123"
                 }
             }
         },

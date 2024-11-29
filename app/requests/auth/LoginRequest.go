@@ -1,8 +1,9 @@
-package requests
+package auth
 
 import (
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
+    "tradeapi/app/requests"
 )
 
 type LoginRequestParams struct {
@@ -21,7 +22,7 @@ func NewLoginRequest(db *gorm.DB) *LoginRequest {
 
 func (l *LoginRequest) Validate() map[string]interface{} {
     validationErrors := make(map[string]string)
-	req := NewRequestHelper()
+	req := requests.NewRequestHelper()
     
     // Validação da Step1
     err := validator.New().Struct(&l.LoginRequestParams)
@@ -32,7 +33,7 @@ func (l *LoginRequest) Validate() map[string]interface{} {
             if ok {
                 field = jsonTag
             }
-            validationErrors[field] = getErrorMessage(err)
+            validationErrors[field] = requests.GetErrorMessage(err)
         }
     }
     

@@ -4,12 +4,15 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
-	"tradeapi/app/requests"
+	requestsAuth "tradeapi/app/requests/auth"
 	"tradeapi/app/resources"
 	"tradeapi/app/services"
 	"tradeapi/utils/helpers"
 )
 
+type TokenResponse struct {
+    Token string `json:"token"`
+}
 type AuthController struct {
 	controller  *Controller
 	authService *services.AuthService
@@ -22,8 +25,16 @@ func NewAuthController(controller *Controller) *AuthController {
 	}
 }
 
+// @Summary Logar usuário 
+// @Description Realiza login de usuário
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body requestsAuth.LoginRequestParams true "Dados do usuário"
+// @Success 201 {object} TokenResponse "Resposta de login"
+// @Router /api/auth/login [post]
 func (ac *AuthController) Login(c *fiber.Ctx) error {
-	req := requests.NewLoginRequest(ac.controller.DB)
+	req := requestsAuth.NewLoginRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.LoginRequestParams); err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
@@ -48,11 +59,11 @@ func (ac *AuthController) Login(c *fiber.Ctx) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body requests.RegisterRequestStep1 true "Dados do usuário"
+// @Param request body requestsAuth.RegisterRequestStep1 true "Dados do usuário"
 // @Success 201 {object} resources.UserResource "Usuário registrado"
-// @Router /api/register/step1 [post]
+// @Router /api/auth/register_step1 [post]
 func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
-	req := requests.NewRegisterRequest(ac.controller.DB)
+	req := requestsAuth.NewRegisterRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.RegisterRequestStep1); err != nil {
 		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
@@ -85,11 +96,11 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body requests.RegisterRequestStep2 true "Dados do usuário"
+// @Param request body requestsAuth.RegisterRequestStep2 true "Dados do usuário"
 // @Success 200 {object} resources.UserResource "Senha definida"
-// @Router /api/register/step2 [post]
+// @Router /api/auth/register_step2 [post]
 func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
-    req := requests.NewRegisterRequest(ac.controller.DB)
+    req := requestsAuth.NewRegisterRequest(ac.controller.DB)
 
     if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
         return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
@@ -114,9 +125,9 @@ func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
 // @Summary Envia código de validação
 // @Description Envia código de validação para o e-mail fornecido.
 // @Tags Auth
-// @Param email body string true "E-mail do usuário" example="joão@mail.com"
+// @Param request body requestsAuth.ValidationCodeRequestParams true "e-mail"
 // @Success 200 {object} map[string]string "Código enviado" example="{\"message\": \"Código enviado com sucesso\"}"
-// @Router /api/send-validation-code [post]
+// @Router /api/auth/send-validation-code [post]
 func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 	var dados map[string]string
@@ -135,9 +146,9 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 // @Description Verifica se o código de validação é válido.
 // @Tags Auth
 // @Param email body string true "E-mail do usuário" example="joao@mail.com"
-// @Param code body string true "Código de validação" example="5329"
-// @Success 200 {object} map[string]string "Código válido"
-// @Router /api/verify-validation-code [post]
+// @Param request body requestsAuth.VerifyCodeRequestParams true "email, code"
+// @Success 200 {object} object "Código validado com sucesso"
+// @Router /api/auth/verify-validation-code [post]
 func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 	var dados map[string]string
 	err := c.BodyParser(&dados)
@@ -152,4 +163,17 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{
 		"hash": hash,
 	})
+}
+
+// @Summary        Deslogar usuário
+// @Description    Desloga o usuário atual
+// @Tags           Autenticação
+// @Accept         json
+// @Produce        json
+// @Success 200 {object} object "Usuário deslogado com sucesso"
+// @Router /api/auth/logout [get]
+func (ac *AuthController) Logout(c *fiber.Ctx) error {
+    c.Locals("user", nil) 
+    c.ClearCookie("token")
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Deslogado com sucesso"})
 }

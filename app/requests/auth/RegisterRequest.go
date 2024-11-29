@@ -1,8 +1,8 @@
-package requests
+package auth
 
 import (
 	"tradeapi/app/models"
-
+    "tradeapi/app/requests"
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
@@ -28,7 +28,7 @@ func NewRegisterRequest(db *gorm.DB) *RegisterRequestInternal {
 
 func (r *RegisterRequestInternal) Validate() map[string]interface{} {
     validationErrors := make(map[string]string)
-    req := NewRequestHelper()
+    req := requests.NewRequestHelper()
 
     // Validação da Step1
     err := validator.New().Struct(&r.RegisterRequestStep1)
@@ -39,7 +39,7 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
             if ok {
                 field = jsonTag
             }
-            validationErrors[field] = getErrorMessage(err)
+            validationErrors[field] = requests.GetErrorMessage(err)
         }
     }
     
@@ -52,7 +52,7 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
             if ok {
                 field = jsonTag
             }
-            validationErrors[field] = getErrorMessage(err)
+            validationErrors[field] = requests.GetErrorMessage(err)
         }
     }
     

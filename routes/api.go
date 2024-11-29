@@ -52,6 +52,10 @@ func (r *Route) SetupAPIRoutes() {
 		auth.Post("/register_step_2", authController.RegisterStep2)
 		auth.Post("/send-validation-code", authController.SendValidationCode)
 		auth.Post("/verify-validation-code", authController.VerifyValidationCode)
+		auth.Use(config.Middleware(r.DB))
+		{
+			auth.Get("/logout", authController.Logout)
+		}
 	}
 
 	/* Rotas de usuários */

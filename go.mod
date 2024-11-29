@@ -44,7 +44,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/swaggo/files/v2 v2.0.1 // indirect
-	github.com/swaggo/swag v1.16.4 // indirect
+	github.com/swaggo/swag v1.16.4
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.57.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect

@@ -15,7 +15,7 @@ import (
 	"tradeapi/app/mail"
 	"tradeapi/app/models"
 	"tradeapi/app/repositories"
-	"tradeapi/app/requests"
+	 requestsAuth "tradeapi/app/requests/auth"
 	"tradeapi/utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
@@ -52,7 +52,7 @@ func NewAuthService(db *gorm.DB) *AuthService {
 }
 
 //Login do usuário
-func (s *AuthService) Login(params requests.LoginRequestParams) (string, int, error) {
+func (s *AuthService) Login(params requestsAuth.LoginRequestParams) (string, int, error) {
     // Verifica se o usuário existe
     user, err := s.userRepo.FindByEmail(params.Email)
     if err != nil || user.ID == 0 {
@@ -74,7 +74,7 @@ func (s *AuthService) Login(params requests.LoginRequestParams) (string, int, er
 }
 
 // RegisterUser registra um novo usuário
-func (s *AuthService) RegisterUserStep1(req requests.RegisterRequestStep1) (*models.User, error) {
+func (s *AuthService) RegisterUserStep1(req requestsAuth.RegisterRequestStep1) (*models.User, error) {
     // Verifica se o e-mail já está registrado
     existingUser, err := s.userRepo.FindByEmail(req.Email)
     if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -99,7 +99,7 @@ func (s *AuthService) RegisterUserStep1(req requests.RegisterRequestStep1) (*mod
     return user, nil
 }
 
-func (s *AuthService) RegisterUserStep2(req requests.RegisterRequestStep2) (*ResponseStep2, int, error) {
+func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (*ResponseStep2, int, error) {
 	registerHash, err := s.hashRepo.GetLastHash(req.Hash)
 
     if err != nil && err.Error() != "record not found" {

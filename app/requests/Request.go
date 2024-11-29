@@ -28,7 +28,7 @@ func (rh *RequestHelper) GetJSONTag(field string, structs ...interface{}) (strin
 }
 
 //mensagems de erro customizadas
-func getErrorMessage(err validator.FieldError) string {
+func GetErrorMessage(err validator.FieldError) string {
 	switch err.Tag() {
 	case "required":
 		return "Este campo é obrigatório"
