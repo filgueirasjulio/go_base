@@ -46,8 +46,15 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao registrar o usuário")
 	}
 
+	//envio de e-mail
+	err = ac.authService.SendValidationCodeEmail(user.Email)
+	if err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+	}
+
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "Usuário registrado com sucesso!",
+		"message": "Foi enviado um código de validação para seu e-mail. Você tem até 30 minutos para o validar",
 		"data":    resources.Transform(user),
 	})
 }
