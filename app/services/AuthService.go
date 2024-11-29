@@ -51,6 +51,28 @@ func NewAuthService(db *gorm.DB) *AuthService {
 	}
 }
 
+//Login do usuário
+func (s *AuthService) Login(params requests.LoginRequestParams) (string, int, error) {
+    // Verifica se o usuário existe
+    user, err := s.userRepo.FindByEmail(params.Email)
+    if err != nil || user.ID == 0 {
+        return "", 404, errors.New("login - erro ao buscar usuário")
+    }
+
+    // Verifica senha
+    if !helpers.VerifyPassword(user.Password, params.Password) {
+        return "", 401, errors.New("usuário ou senha inválidos")
+    }
+
+    // Gera token
+    token, err := s.GenerateToken(user.Email, params.Password)
+    if err != nil {
+        return "", 500, errors.New("login - erro ao gerar token")
+    }
+
+    return token, 200, nil
+}
+
 // RegisterUser registra um novo usuário
 func (s *AuthService) RegisterUserStep1(req requests.RegisterRequestStep1) (*models.User, error) {
     // Verifica se o e-mail já está registrado
@@ -81,37 +103,37 @@ func (s *AuthService) RegisterUserStep2(req requests.RegisterRequestStep2) (*Res
 	registerHash, err := s.hashRepo.GetLastHash(req.Hash)
 
     if err != nil && err.Error() != "record not found" {
-        return nil, 500, fmt.Errorf("erro ao buscar o código de validação no banco")
+        return nil, 500, errors.New("erro ao buscar o código de validação no banco")
     }
 
     if registerHash == nil || registerHash.Hash == "" || registerHash.ExpiresAt.IsZero() {
-        return nil, 404, fmt.Errorf("código de validação não encontrado")
+        return nil, 404, errors.New("código de validação não encontrado")
     }
 
     if registerHash.Hash != req.Hash {
-        return nil, 404, fmt.Errorf("código inválido")
+        return nil, 404, errors.New("código inválido")
     }
 
     if time.Now().After(registerHash.ExpiresAt) {
-        return nil, 403, fmt.Errorf("código expirado, gere um novo")
+        return nil, 403, errors.New("código expirado, gere um novo")
     }
 
     user, err := s.userRepo.FindByHash(req.Hash)
     if err != nil {
-        return nil, 500, fmt.Errorf("error ao buscar usuário")
+        return nil, 500, errors.New("error ao buscar usuário")
     }
     if user == nil {
-        return nil, 404, fmt.Errorf("usuário não encontrado")
+        return nil, 404, errors.New("usuário não encontrado")
     }
 
     if user.Password != "" {
-        return nil, 404, fmt.Errorf("senha já definida")
+        return nil, 404, errors.New("senha já definida")
     }
 
     // Cria o hash da senha
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
     if err != nil {
-        return nil, 500, fmt.Errorf("falha ao gerar o hash da senha")
+        return nil, 500, errors.New("falha ao gerar o hash da senha")
     }
 
     // Atualiza a senha do usuário
@@ -120,12 +142,12 @@ func (s *AuthService) RegisterUserStep2(req requests.RegisterRequestStep2) (*Res
     // Salva as alterações
     _, err = s.authRepo.Update(user)
     if err != nil {
-        return nil, 500, fmt.Errorf("erro au atualizar o password do usuário")
+        return nil, 500, errors.New("erro au atualizar o password do usuário")
     }
 
 	token, err := s.GenerateToken(user.Email, user.Password)
     if err != nil {
-        return nil, 500, fmt.Errorf("erro ao gerar token")
+        return nil, 500, errors.New("erro ao gerar token")
 	}
 
     return &ResponseStep2{User: user, Token: token}, 200, nil
@@ -165,19 +187,19 @@ func (s *AuthService) VerifyValidationCode(c *fiber.Ctx, email, code string) (st
     validationCode, err := s.codeRepo.GetLastCodeByUserEmail(email)
 
     if err != nil && err.Error() != "record not found" {
-        return "", 500, fmt.Errorf("erro ao buscar o código de validação no banco")
+        return "", 500, errors.New("erro ao buscar o código de validação no banco")
     }
 
     if validationCode == nil || validationCode.Code == "" || validationCode.ExpiresAt.IsZero() {
-        return "", 404, fmt.Errorf("código de validação não encontrado")
+        return "", 404, errors.New("código de validação não encontrado")
     }
 
     if code != validationCode.Code {
-        return "", 404, fmt.Errorf("código inválido")
+        return "", 404, errors.New("código inválido")
     }
 
     if time.Now().After(validationCode.ExpiresAt) {
-        return "", 403, fmt.Errorf("código expirado, gere um novo")
+        return "", 403, errors.New("código expirado, gere um novo")
     }
 
     // Marca o código como validado e deleta
@@ -202,7 +224,7 @@ func (s *AuthService) VerifyValidationCode(c *fiber.Ctx, email, code string) (st
     // Salva hash temporário
     _, err = s.authRepo.CreateHash(&registerHash)
     if err != nil {
-        return "", 500, fmt.Errorf("Falha ao salvar hash temporário")
+        return "", 500, errors.New("Falha ao salvar hash temporário")
     }
 
     return hashMD5, 200, nil
@@ -230,7 +252,7 @@ func (s *AuthService) GenerateToken(email string, senha string) (string, error) 
     // Geração do token com assinatura
     tokenString, err := token.SignedString([]byte(secretKey))
     if err != nil {
-        return "", err
+        return "", errors.New("erro ao gerar token")
     }
 
     return tokenString, nil

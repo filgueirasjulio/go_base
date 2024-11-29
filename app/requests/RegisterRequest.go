@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"reflect"
 	"tradeapi/app/models"
 
 	"github.com/go-playground/validator/v10"
@@ -9,14 +8,13 @@ import (
 )
 
 type RegisterRequestStep1 struct {
-    Name  string `json:"name" validate:"required,min=3"`
-    Email string `json:"email" validate:"required,email"`
+    Name  string `json:"name" validate:"required,min=3" example:"João Silva"`
+    Email string `json:"email" validate:"required,email" example:"joao@example.com"`
 }
-
 type RegisterRequestStep2 struct {
-	Hash string `json:"hash" validate:"required"`
-    Password string `json:"password" validate:"required,min=6"`
-	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=Password"`
+    Hash            string `json:"hash" validate:"required" example:"72fd3951e5bd758b7619ddc62af1f052"`
+    Password        string `json:"password" validate:"required,min=6" example:"senha123"`
+    ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=Password" example:"senha123"`
 }
 type RegisterRequestInternal struct {
 	RegisterRequestStep1
@@ -30,13 +28,14 @@ func NewRegisterRequest(db *gorm.DB) *RegisterRequestInternal {
 
 func (r *RegisterRequestInternal) Validate() map[string]interface{} {
     validationErrors := make(map[string]string)
-    
+    req := NewRequestHelper()
+
     // Validação da Step1
     err := validator.New().Struct(&r.RegisterRequestStep1)
     if err != nil {
         for _, err := range err.(validator.ValidationErrors) {
             field := err.Field()
-            jsonTag, ok := r.GetJSONTag(field)
+            jsonTag, ok := req.GetJSONTag(field)
             if ok {
                 field = jsonTag
             }
@@ -49,7 +48,7 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
     if err != nil {
         for _, err := range err.(validator.ValidationErrors) {
             field := err.Field()
-            jsonTag, ok := r.GetJSONTag(field)
+            jsonTag, ok := req.GetJSONTag(field)
             if ok {
                 field = jsonTag
             }
@@ -71,32 +70,6 @@ func (r *RegisterRequestInternal) Validate() map[string]interface{} {
     return nil
 }
 
-func (r *RegisterRequestInternal) GetJSONTag(field string) (string, bool) {
-    // Reflete RegisterRequestStep1
-    rv1 := reflect.ValueOf(r.RegisterRequestStep1)
-    for i := 0; i < rv1.NumField(); i++ {
-        if rv1.Type().Field(i).Name == field {
-            tag := rv1.Type().Field(i).Tag.Get("json")
-            if tag != "" {
-                return tag, true
-            }
-        }
-    }
-
-    // Reflete RegisterRequestStep2
-    rv2 := reflect.ValueOf(r.RegisterRequestStep2)
-    for i := 0; i < rv2.NumField(); i++ {
-        if rv2.Type().Field(i).Name == field {
-            tag := rv2.Type().Field(i).Tag.Get("json")
-            if tag != "" {
-                return tag, true
-            }
-        }
-    }
-
-    return "", false
-}
-
 func (r *RegisterRequestInternal) ValidateEmailUniqueness() bool {
 	var count int64
 	r.DB.Model(&models.User{}).Where("email = ?", r.Email).Count(&count)
@@ -104,17 +77,3 @@ func (r *RegisterRequestInternal) ValidateEmailUniqueness() bool {
 	return count == 0
 }
 
-func getErrorMessage(err validator.FieldError) string {
-	switch err.Tag() {
-	case "required":
-		return "Este campo é obrigatório"
-	case "email":
-		return "Deve ser um e-mail válido"
-	case "min":
-		return "Deve ter pelo menos " + err.Param() + " caracteres"
-	case "eqfield":
-		return "Deve ser igual a " + err.Param()
-	default:
-		return "Entrada inválida"
-	}
-}

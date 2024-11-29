@@ -15,9 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/register": {
+        "/api/register/step1": {
             "post": {
-                "description": "Cria um novo usuário",
+                "description": "Cria um novo usuário sem senha",
                 "consumes": [
                     "application/json"
                 ],
@@ -27,15 +27,15 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Registrar usuário",
+                "summary": "Registrar usuário (Step 1)",
                 "parameters": [
                     {
                         "description": "Dados do usuário",
-                        "name": "req",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/requests.RegisterRequest"
+                            "$ref": "#/definitions/requests.RegisterRequestStep1"
                         }
                     }
                 ],
@@ -44,6 +44,71 @@ const docTemplate = `{
                         "description": "Usuário registrado",
                         "schema": {
                             "$ref": "#/definitions/resources.UserResource"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/register/step2": {
+            "post": {
+                "description": "Define a senha do usuário",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Registrar usuário (Step 2)",
+                "parameters": [
+                    {
+                        "description": "Dados do usuário",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RegisterRequestStep2"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Senha definida",
+                        "schema": {
+                            "$ref": "#/definitions/resources.UserResource"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/send-validation-code": {
+            "post": {
+                "description": "Envia código de validação para o e-mail fornecido.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Envia código de validação",
+                "parameters": [
+                    {
+                        "description": "E-mail do usuário",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Código enviado\" example=\"{\\\"message\\\": \\\"Código enviado com sucesso\\\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -63,6 +128,46 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/models.User"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/verify-validation-code": {
+            "post": {
+                "description": "Verifica se o código de validação é válido.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verifica código de validação",
+                "parameters": [
+                    {
+                        "description": "E-mail do usuário",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Código de validação",
+                        "name": "code",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Código válido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
                         }
                     }
@@ -97,24 +202,44 @@ const docTemplate = `{
                 }
             }
         },
-        "requests.RegisterRequest": {
+        "requests.RegisterRequestStep1": {
             "type": "object",
             "required": [
                 "email",
-                "name",
-                "password"
+                "name"
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "joao@example.com"
                 },
                 "name": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 3,
+                    "example": "João Silva"
+                }
+            }
+        },
+        "requests.RegisterRequestStep2": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "hash",
+                "password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string",
+                    "example": "senha123"
+                },
+                "hash": {
+                    "type": "string",
+                    "example": "72fd3951e5bd758b7619ddc62af1f052"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "senha123"
                 }
             }
         },

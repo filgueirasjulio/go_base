@@ -22,28 +22,49 @@ func NewAuthController(controller *Controller) *AuthController {
 	}
 }
 
+func (ac *AuthController) Login(c *fiber.Ctx) error {
+	req := requests.NewLoginRequest(ac.controller.DB)
+
+	if err := c.BodyParser(&req.LoginRequestParams); err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := req.Validate(); err != nil {
+		return helpers.ErrorResponse(c, fiber.StatusUnprocessableEntity, err)
+	}
+
+	token, status, err := ac.authService.Login(req.LoginRequestParams)
+	if err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+	}
+
+	return c.Status(status).JSON(fiber.Map{
+		"token": token,
+	})
+}
+
 // @Summary Registrar usuário (Step 1)
 // @Description Cria um novo usuário sem senha
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param req body requests.RegisterRequestStep1 true "Dados do usuário"
+// @Param request body requests.RegisterRequestStep1 true "Dados do usuário"
 // @Success 201 {object} resources.UserResource "Usuário registrado"
 // @Router /api/register/step1 [post]
 func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 	req := requests.NewRegisterRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.RegisterRequestStep1); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, "Falha ao processar requisição")
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	if err := validator.New().Struct(req.RegisterRequestStep1); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, "Falha ao iniciar o step 1")
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
 	user, err := ac.authService.RegisterUserStep1(req.RegisterRequestStep1)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao registrar o usuário")
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	//envio de e-mail
@@ -64,18 +85,18 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param req body requests.RegisterRequestStep2 true "Dados do usuário"
+// @Param request body requests.RegisterRequestStep2 true "Dados do usuário"
 // @Success 200 {object} resources.UserResource "Senha definida"
 // @Router /api/register/step2 [post]
 func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
     req := requests.NewRegisterRequest(ac.controller.DB)
 
     if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
-        return helpers.ErrorResponseString(c, fiber.StatusBadRequest, "Falha ao processar requisição")
+        return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
     }
 
     if err := validator.New().Struct(req.RegisterRequestStep2); err != nil {
-        return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, "Falha ao iniciar o step 2")
+        return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
     }
 
     response, status, err := ac.authService.RegisterUserStep2(req.RegisterRequestStep2)
@@ -90,7 +111,12 @@ func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
     })
 }
 
-// envio de códgio para validação do cadastro de usuário
+// @Summary Envia código de validação
+// @Description Envia código de validação para o e-mail fornecido.
+// @Tags Auth
+// @Param email body string true "E-mail do usuário" example="joão@mail.com"
+// @Success 200 {object} map[string]string "Código enviado" example="{\"message\": \"Código enviado com sucesso\"}"
+// @Router /api/send-validation-code [post]
 func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 	var dados map[string]string
@@ -105,6 +131,13 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso")
 }
 
+// @Summary Verifica código de validação
+// @Description Verifica se o código de validação é válido.
+// @Tags Auth
+// @Param email body string true "E-mail do usuário" example="joao@mail.com"
+// @Param code body string true "Código de validação" example="5329"
+// @Success 200 {object} map[string]string "Código válido"
+// @Router /api/verify-validation-code [post]
 func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 	var dados map[string]string
 	err := c.BodyParser(&dados)
