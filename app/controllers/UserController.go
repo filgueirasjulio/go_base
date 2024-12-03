@@ -64,7 +64,7 @@ func (uc *UserController) Show(c *fiber.Ctx) error {
 // @Summary Atualizar usuário
 // @Description Atualiza informações de um usuário em específico
 // @Tags Users
-// @Param request body requestsAuth.LoginRequestParams true "Dados do usuário"
+// @Param request body requestsUser.UserUpdateDetailsRequestParams true "Dados do usuário"
 // @Success 200 {array} models.User
 // @Router /api/users/{id} [put]
 func (uc *UserController) UpdateDetails(c *fiber.Ctx) error {

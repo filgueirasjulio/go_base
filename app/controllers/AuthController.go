@@ -1,8 +1,15 @@
 package controllers
 
 import (
+	"errors"
+	"log"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 
 	requestsAuth "tradeapi/app/requests/auth"
 	"tradeapi/app/resources"
@@ -11,8 +18,9 @@ import (
 )
 
 type TokenResponse struct {
-    Token string `json:"token"`
+	Token string `json:"token"`
 }
+
 type AuthController struct {
 	controller  *Controller
 	authService *services.AuthService
@@ -25,9 +33,9 @@ func NewAuthController(controller *Controller) *AuthController {
 	}
 }
 
-// @Summary Logar usuário 
+// @Summary Logar usuário
 // @Description Realiza login de usuário
-// @Tags Auth
+// @Tags Autenticação
 // @Accept json
 // @Produce json
 // @Param request body requestsAuth.LoginRequestParams true "Dados do usuário"
@@ -56,7 +64,7 @@ func (ac *AuthController) Login(c *fiber.Ctx) error {
 
 // @Summary Registrar usuário (Step 1)
 // @Description Cria um novo usuário sem senha
-// @Tags Auth
+// @Tags Autenticação
 // @Accept json
 // @Produce json
 // @Param request body requestsAuth.RegisterRequestStep1 true "Dados do usuário"
@@ -84,7 +92,6 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "Foi enviado um código de validação para seu e-mail. Você tem até 30 minutos para o validar",
 		"data":    resources.Transform(user),
@@ -93,38 +100,38 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 
 // @Summary Registrar usuário (Step 2)
 // @Description Define a senha do usuário
-// @Tags Auth
+// @Tags Autenticação
 // @Accept json
 // @Produce json
 // @Param request body requestsAuth.RegisterRequestStep2 true "Dados do usuário"
 // @Success 200 {object} resources.UserResource "Senha definida"
 // @Router /api/auth/register_step2 [post]
 func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
-    req := requestsAuth.NewRegisterRequest(ac.controller.DB)
+	req := requestsAuth.NewRegisterRequest(ac.controller.DB)
 
-    if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
-        return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
-    }
+	if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
+	}
 
-    if err := validator.New().Struct(req.RegisterRequestStep2); err != nil {
-        return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
-    }
+	if err := validator.New().Struct(req.RegisterRequestStep2); err != nil {
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
 
-    response, status, err := ac.authService.RegisterUserStep2(req.RegisterRequestStep2)
-    if err != nil {
+	response, status, err := ac.authService.RegisterUserStep2(req.RegisterRequestStep2)
+	if err != nil {
 		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
-    }
+	}
 
-    return c.Status(fiber.StatusOK).JSON(fiber.Map{
-        "message": "Senha definida com sucesso!",
-		"token": response.Token,
-        "data":    resources.Transform(response.User),
-    })
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Senha definida com sucesso!",
+		"token":   response.Token,
+		"data":    resources.Transform(response.User),
+	})
 }
 
 // @Summary Envia código de validação
 // @Description Envia código de validação para o e-mail fornecido.
-// @Tags Auth
+// @Tags Autenticação
 // @Param request body requestsAuth.ValidationCodeRequestParams true "e-mail"
 // @Success 200 {object} map[string]string "Código enviado" example="{\"message\": \"Código enviado com sucesso\"}"
 // @Router /api/auth/send-validation-code [post]
@@ -144,7 +151,7 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 // @Summary Verifica código de validação
 // @Description Verifica se o código de validação é válido.
-// @Tags Auth
+// @Tags Autenticação
 // @Param email body string true "E-mail do usuário" example="joao@mail.com"
 // @Param request body requestsAuth.VerifyCodeRequestParams true "email, code"
 // @Success 200 {object} object "Código validado com sucesso"
@@ -165,7 +172,7 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 	})
 }
 
-// @Summary        Deslogar usuário
+// @Summary Deslogar usuário
 // @Description    Desloga o usuário atual
 // @Tags           Autenticação
 // @Accept         json
@@ -173,7 +180,69 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 // @Success 200 {object} object "Usuário deslogado com sucesso"
 // @Router /api/auth/logout [get]
 func (ac *AuthController) Logout(c *fiber.Ctx) error {
-    c.Locals("user", nil) 
-    c.ClearCookie("token")
-    return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Deslogado com sucesso"})
+	c.Locals("user", nil)
+	c.ClearCookie("token")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Deslogado com sucesso"})
+}
+
+func (ac *AuthController) RefreshToken(refreshTokenString string) (string, error) {
+    token, err := jwt.Parse(refreshTokenString, func(token *jwt.Token) (interface{}, error) {
+        return []byte(os.Getenv("JWT_KEY")), nil
+    })
+
+    if err != nil {
+        log.Println(err) // Registre o erro
+        return "", errors.New("token inválido")
+    }
+
+    claims, ok := token.Claims.(jwt.MapClaims)
+    if !ok {
+        return "", errors.New("token inválido")
+    }
+
+    exp, ok := claims["exp"].(float64)
+    if !ok || time.Unix(int64(exp), 0).Before(time.Now()) {
+        return "", errors.New("token expirado")
+    }
+
+    email, ok := claims["email"].(string)
+    if !ok {
+        return "", errors.New("claim 'email' não encontrada")
+    }
+
+    // Gere novo token
+    newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "email": email,
+        "exp":   time.Now().Add(time.Hour * 1).Unix(),
+    })
+
+    newAccessTokenString, err := newAccessToken.SignedString([]byte(os.Getenv("JWT_KEY")))
+
+    return newAccessTokenString, err
+}
+
+
+// @Summary     Refresca o token de acesso
+// @Description Retorna um novo token de acesso válido por 1 hora
+// @Tags        Autenticação
+// @Accept      application/json
+// @Produce     application/json
+// @Param       Authorization header string true "Token de refresh"
+// @Success     200 {string} string "Novo token de acesso"
+// @Router      /api/auth/refresh-token [post]
+func (ac *AuthController) HandleRefreshToken(c *fiber.Ctx) error {
+	refreshTokenString := c.Get("Authorization")
+
+	// Remova o prefixo "Bearer " se necessário
+	if strings.HasPrefix(refreshTokenString, "Bearer ") {
+		refreshTokenString = strings.TrimSpace(refreshTokenString[7:])
+	}
+
+	newAccessToken, err := ac.RefreshToken(refreshTokenString)
+
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
+	}
+
+	return c.JSON(fiber.Map{"token": newAccessToken})
 }

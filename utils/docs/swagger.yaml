@@ -1,4 +1,20 @@
 definitions:
+  User.UserUpdateDetailsRequestParams:
+    properties:
+      birth_date:
+        example: 10/01/2000
+        type: string
+      name:
+        example: João Souza
+        type: string
+      phone:
+        example: "71991112222"
+        type: string
+    required:
+    - birth_date
+    - name
+    - phone
+    type: object
   auth.LoginRequestParams:
     properties:
       email:
@@ -65,6 +81,8 @@ definitions:
     type: object
   models.User:
     properties:
+      birth_date:
+        type: string
       created_at:
         type: string
       deleted_at:
@@ -73,15 +91,21 @@ definitions:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       name:
         type: string
       password:
+        type: string
+      phone:
         type: string
       updated_at:
         type: string
     type: object
   resources.UserResource:
     properties:
+      birth_date:
+        type: string
       created_at:
         type: string
       email:
@@ -89,6 +113,8 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      phone:
         type: string
     type: object
 info:
@@ -115,7 +141,7 @@ paths:
             $ref: '#/definitions/controllers.TokenResponse'
       summary: Logar usuário
       tags:
-      - Auth
+      - Autenticação
   /api/auth/logout:
     get:
       consumes:
@@ -129,6 +155,27 @@ paths:
           schema:
             type: object
       summary: Deslogar usuário
+      tags:
+      - Autenticação
+  /api/auth/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: Retorna um novo token de acesso válido por 1 hora
+      parameters:
+      - description: Token de refresh
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Novo token de acesso
+          schema:
+            type: string
+      summary: Refresca o token de acesso
       tags:
       - Autenticação
   /api/auth/register_step1:
@@ -152,7 +199,7 @@ paths:
             $ref: '#/definitions/resources.UserResource'
       summary: Registrar usuário (Step 1)
       tags:
-      - Auth
+      - Autenticação
   /api/auth/register_step2:
     post:
       consumes:
@@ -174,7 +221,7 @@ paths:
             $ref: '#/definitions/resources.UserResource'
       summary: Registrar usuário (Step 2)
       tags:
-      - Auth
+      - Autenticação
   /api/auth/send-validation-code:
     post:
       description: Envia código de validação para o e-mail fornecido.
@@ -195,7 +242,7 @@ paths:
             type: object
       summary: Envia código de validação
       tags:
-      - Auth
+      - Autenticação
   /api/auth/verify-validation-code:
     post:
       description: Verifica se o código de validação é válido.
@@ -219,7 +266,7 @@ paths:
             type: object
       summary: Verifica código de validação
       tags:
-      - Auth
+      - Autenticação
   /api/users:
     get:
       description: Obtém uma lista de usuários cadastrados
@@ -231,6 +278,44 @@ paths:
               $ref: '#/definitions/models.User'
             type: array
       summary: Listar usuários
+      tags:
+      - Users
+  /api/users/{id}:
+    get:
+      description: Obtém informações de um usuário em específico
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      summary: Listar usuário
+      tags:
+      - Users
+    put:
+      description: Atualiza informações de um usuário em específico
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/User.UserUpdateDetailsRequestParams'
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      summary: Atualizar usuário
       tags:
       - Users
 swagger: "2.0"

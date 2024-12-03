@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "Autenticação"
                 ],
                 "summary": "Logar usuário",
                 "parameters": [
@@ -72,6 +72,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/refresh-token": {
+            "post": {
+                "description": "Retorna um novo token de acesso válido por 1 hora",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Refresca o token de acesso",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token de refresh",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Novo token de acesso",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/register_step1": {
             "post": {
                 "description": "Cria um novo usuário sem senha",
@@ -82,7 +114,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "Autenticação"
                 ],
                 "summary": "Registrar usuário (Step 1)",
                 "parameters": [
@@ -116,7 +148,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "Autenticação"
                 ],
                 "summary": "Registrar usuário (Step 2)",
                 "parameters": [
@@ -144,7 +176,7 @@ const docTemplate = `{
             "post": {
                 "description": "Envia código de validação para o e-mail fornecido.",
                 "tags": [
-                    "Auth"
+                    "Autenticação"
                 ],
                 "summary": "Envia código de validação",
                 "parameters": [
@@ -175,7 +207,7 @@ const docTemplate = `{
             "post": {
                 "description": "Verifica se o código de validação é válido.",
                 "tags": [
-                    "Auth"
+                    "Autenticação"
                 ],
                 "summary": "Verifica código de validação",
                 "parameters": [
@@ -227,9 +259,89 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "description": "Obtém informações de um usuário em específico",
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Listar usuário",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuário",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.User"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Atualiza informações de um usuário em específico",
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Atualizar usuário",
+                "parameters": [
+                    {
+                        "description": "Dados do usuário",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/User.UserUpdateDetailsRequestParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.User"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "User.UserUpdateDetailsRequestParams": {
+            "type": "object",
+            "required": [
+                "birth_date",
+                "name",
+                "phone"
+            ],
+            "properties": {
+                "birth_date": {
+                    "type": "string",
+                    "example": "10/01/2000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "João Souza"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "71991112222"
+                }
+            }
+        },
         "auth.LoginRequestParams": {
             "type": "object",
             "required": [
@@ -324,6 +436,9 @@ const docTemplate = `{
         "models.User": {
             "type": "object",
             "properties": {
+                "birth_date": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -336,10 +451,16 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "phone": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -350,6 +471,9 @@ const docTemplate = `{
         "resources.UserResource": {
             "type": "object",
             "properties": {
+                "birth_date": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -360,6 +484,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "phone": {
                     "type": "string"
                 }
             }
