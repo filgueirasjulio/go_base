@@ -13,4 +13,6 @@ type User struct {
     CreatedAt time.Time  `json:"created_at"`
     UpdatedAt time.Time  `json:"updated_at,omitempty"` 
     DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"` 
+    Phone string `json:"phone,omitempty"`
+	BirthDate  *time.Time `json:"birth_date,omitempty"`
 }

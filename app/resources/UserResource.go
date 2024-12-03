@@ -1,11 +1,16 @@
 package resources
 
-import "tradeapi/app/models"
+import (
+	"tradeapi/app/models"
+	"tradeapi/utils/helpers"
+)
 
 type UserResource struct {
 	ID        uint   `json:"id"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
+	Phone	  string  `json:"phone"`
+	BirthDate string  `json:"birth_date"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -15,6 +20,8 @@ func Transform(user *models.User) UserResource {
 		ID:        user.ID,
 		Name:      user.Name,
 		Email:     user.Email,
+		Phone: helpers.FormatPhoneNumber(user.Phone),
+		BirthDate: user.BirthDate.Format("02/01/2006"),
 		CreatedAt: user.CreatedAt.Format("02/01/2006"),
 	}
 }

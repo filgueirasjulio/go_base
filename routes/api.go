@@ -62,8 +62,10 @@ func (r *Route) SetupAPIRoutes() {
 	/* Rotas de usuários */
 	userController := controllers.NewUserController(controllerBase)
 	users := api.Group("/users")
-	users.Use(config.Middleware(r.DB)) 
+	users.Use(config.Middleware(r.DB))
 	{
 		users.Get("/", userController.Index)
+		users.Get("/:id", userController.Show)
+		users.Put("/:id/update-details", userController.UpdateDetails)
 	}
 }

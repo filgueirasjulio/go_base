@@ -55,7 +55,7 @@ func (r *UserRepository) GetAllUsers() ([]*models.User, error) {
 }
 
 // Update atualiza um usuário existente
-func (r *AuthRepository) Update(user *models.User) (*models.User, error) {
+func (r *UserRepository) Update(user *models.User) (*models.User, error) {
 	err := r.db.Save(user).Error
 	if err != nil {
 		return nil, err

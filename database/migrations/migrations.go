@@ -31,38 +31,45 @@ func (m *Migration) RunMigrations() {
 func (m *Migration) checkAndMigrateTablesAndColumns(models []interface{}) bool {
     migrated := false
     for _, model := range models {
-        modelType := reflect.TypeOf(model)
-        tableName := modelType.Name()
-        
+		if model == nil {
+            log.Println("Modelo nulo")
+            continue
+        }
+
+        if m.DB == nil {
+            log.Fatal("Banco de dados não inicializado")
+            return false
+        }
+
+        modelType := reflect.TypeOf(model) // Obtém o tipo do struct
+
         // Verifica se a tabela existe
-        if !m.DB.Migrator().HasTable(model) {
-            m.DB.AutoMigrate(model)
+        tableExists := m.DB.Migrator().HasTable(model)
+        if !tableExists {
+            log.Printf("Criando tabela para o modelo '%s'.", modelType.Name())
+            m.DB.AutoMigrate(model) // Cria a tabela
             migrated = true
         } else {
             for i := 0; i < modelType.NumField(); i++ {
                 field := modelType.Field(i)
-                gormTag := field.Tag.Get("gorm")
                 jsonTag := field.Tag.Get("json")
-                
-                // Ignora campos ignorados pelo GORM
-                if gormTag == "-" || jsonTag == "-" {
+                columnName := helpers.ExtractJSONTag(jsonTag)
+
+                // Ignorar campos sem a tag json ou que estão marcados para ignorar (json:"-")
+                if columnName == "" || columnName == "-" {
                     continue
                 }
-                
-                // Extrai nome da coluna
-                columnName := helpers.ExtractJSONTag(jsonTag)
-                if columnName == "" {
-                    columnName = field.Name
-                }
-                
+
                 // Verifica se a coluna existe
-                if !m.DB.Migrator().HasColumn(tableName, columnName) {
-                    m.DB.Migrator().AddColumn(tableName, columnName)
+                if !m.DB.Migrator().HasColumn(model, columnName) && columnName != "validation_code" {
+                    log.Printf("Adicionando coluna '%s' à tabela '%s'.", columnName, modelType.Name())
+                    m.DB.Migrator().AddColumn(model, columnName)
                     migrated = true
                 }
             }
         }
     }
+
     return migrated
 }
 
@@ -70,6 +77,5 @@ func getModels() []interface{} {
     return []interface{}{
         models.User{},
         models.ValidationCode{},
-        models.RegisterHash{},
     }
 }

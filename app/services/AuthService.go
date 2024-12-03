@@ -138,7 +138,7 @@ func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (
     user.IsActive = true
 
     // Salva as alterações
-    _, err = s.authRepo.Update(user)
+    _, err = s.userRepo.Update(user)
     if err != nil {
         return nil, 500, errors.New("erro au atualizar o password do usuário")
     }
