@@ -7,17 +7,22 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	fiberSwagger "github.com/gofiber/swagger"
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
 type Route struct {
 	App *fiber.App
 	DB  *gorm.DB
+	Logger zerolog.Logger
 }
 
 // NewRoute cria uma nova instância de rotas com a aplicação e o banco de dados
-func NewRoute(db *gorm.DB, app *fiber.App) *Route {
-	return &Route{App: app, DB: db}
+func NewRoute(db *gorm.DB, app *fiber.App, logger zerolog.Logger) *Route {
+	return &Route{App: app,
+		DB: db,
+		Logger: logger,
+	}
 }
 
 // @title TradeAPI
@@ -35,7 +40,7 @@ func NewRoute(db *gorm.DB, app *fiber.App) *Route {
 // SetupAPIRoutes configura as rotas da API
 func (r *Route) SetupAPIRoutes() {
 	// Inicializa o controller base com o banco de dados
-	controllerBase := controllers.NewController(r.DB)
+	controllerBase := controllers.NewController(r.DB, r.Logger)
 
 	// Define o prefixo da API
 	api := r.App.Group("/api")

@@ -2,29 +2,40 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"log"
+	"os"
 	"os/signal"
-	"syscall"
+	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
-	"tradeapi/connections"
 	queue "tradeapi/app"
-	
+	"tradeapi/connections"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
-	"github.com/urfave/cli/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/joho/godotenv"
+	zerolog "github.com/rs/zerolog"
+	"github.com/urfave/cli/v2"
 )
 
-
 var app *fiber.App
+var zeroLog zerolog.Logger
+
 
 func init() {
 	app = fiber.New()
+
+	//fiber middlewares
 	app.Use(logger.New())
 	app.Use(recover.New())
+
+	//salvar log em txt
+	zeroLog = zerolog.New(os.Stdout).With().Caller().Logger()
+
+	initLogger()
 
 	// Carrega as variáveis do arquivo .env
 	err := godotenv.Load()
@@ -51,7 +62,7 @@ func main() {
 				Usage: "Executando em modo padrão",
 				Action: func(ctx *cli.Context) error {
 					// Conectar ao banco e rodar o serviço
-					app, err := Teste(app, ctx, "run")
+					app, err := Teste(app, ctx, "run", zeroLog)
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
@@ -64,7 +75,7 @@ func main() {
 				Name:  "test",
 				Usage: "Executando teste de conexão",
 				Action: func(ctx *cli.Context) error {
-					_, err := Teste(app, ctx, "test")			
+					_, err := Teste(app, ctx, "test", zeroLog)
 					if err != nil {
 						log.Fatal("Falha no teste de conexão:", err)
 					}
@@ -77,7 +88,7 @@ func main() {
 				Name:  "migrate",
 				Usage: "Executar as migrations",
 				Action: func(ctx *cli.Context) error {
-					_, err := Teste(app, ctx, "migrate")
+					_, err := Teste(app, ctx, "migrate", zeroLog)
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
@@ -99,7 +110,7 @@ func main() {
 				},
 				Action: func(ctx *cli.Context) error {
 					// Estabelecendo a conexão com o banco
-					_, err := Teste(app, ctx, "seed")
+					_, err := Teste(app, ctx, "seed", zeroLog)
 					if err != nil {
 						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 					}
@@ -115,21 +126,33 @@ func main() {
 	cmd.Run(os.Args)
 }
 
-func Teste(app *fiber.App, c *cli.Context, cmdType string) (*fiber.App,  error) {
-	err := connections.GetDatabaseConnection(app, c, cmdType)
+func Teste(app *fiber.App, c *cli.Context, cmdType string, logger zerolog.Logger) (*fiber.App, error) {
+	zeroLog.Info().Msg("Teste de conexão iniciado")
+	startTime := time.Now()
+
+	err := connections.GetDatabaseConnection(app, c, cmdType, logger)
 	if err != nil {
 		log.Fatal("Erro ao conectar ao banco de dados: %v", err)
 	}
+
+	elapsedTime := time.Since(startTime)
+	zeroLog.Info().Msg("✅ Finalizado o teste de conexão") 
+	zeroLog.Info().Msgf("Tempo de execução: %s",  elapsedTime)
+
 	return app, err
 }
 
 func Run(app *fiber.App) {
-	// Defina porta
+
+	zeroLog.Info().Msgf("Servidor iniciado")
+	startTime := time.Now()
+
+	// Porta
 	port := os.Getenv("APP_PORT")
 
 	go func() {
 		fmt.Printf("Servidor rodando na porta %s...\n", port)
-		if err := app.Listen(":"+port); err != nil {
+		if err := app.Listen(":" + port); err != nil {
 			log.Fatal("Erro ao rodar o servidor:", err)
 			return
 		}
@@ -141,15 +164,42 @@ func Run(app *fiber.App) {
 
 	<-interrupt
 
-	if err := app.Shutdown(); 
-	err != nil {
-        log.Fatal("Erro ao encerrar servidor:", err)
-		return 
-    }
+	if err := app.Shutdown(); err != nil {
+		log.Fatal("Erro ao encerrar servidor:", err)
+		return
+	}
 
 	//encerrando a fila
 	queue.GetQueue().Close()
-    queue.GetQueue().Wait()
+	queue.GetQueue().Wait()
+		
+	elapsedTime := time.Since(startTime)
+	zeroLog.Info().Msg("✅ Servidor finalizado") 
+	zeroLog.Info().Msgf("Tempo de execução: %s",  elapsedTime)
+}
 
-	fmt.Println("Servidor encerrado!")
+
+func initLogger() {
+    logsDir := "logs"
+    if _, err := os.Stat(logsDir); os.IsNotExist(err) {
+        os.Mkdir(logsDir, 0755)
+    }
+
+    filename := filepath.Join(logsDir, "log_"+time.Now().Format("2006-01-02")+".txt")
+    f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+    if err != nil {
+        log.Printf("Erro ao criar arquivo de log: %v", err)
+        os.Exit(1)
+    }
+
+    // Configurar o formato da hora
+    zerolog.TimeFieldFormat = "15:04:05"
+
+    zeroLog = zerolog.New(io.MultiWriter(zerolog.NewConsoleWriter(), f)).
+        With().
+        Caller().
+        Timestamp().
+        Logger()
+
+    zeroLog.Info().Msg("Logger iniciado")
 }

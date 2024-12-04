@@ -8,12 +8,15 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/joho/godotenv v1.5.1
+	github.com/rs/zerolog v1.28.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/crypto v0.29.0
 	gorm.io/driver/postgres v1.5.10
 	gorm.io/gorm v1.25.12
 )
+
+require github.com/iancoleman/orderedmap v0.3.0 // indirect
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"errors"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -29,7 +27,7 @@ type AuthController struct {
 func NewAuthController(controller *Controller) *AuthController {
 	return &AuthController{
 		controller:  controller,
-		authService: services.NewAuthService(controller.DB),
+		authService: services.NewAuthService(controller.DB, controller.Logger),
 	}
 }
 
@@ -42,24 +40,29 @@ func NewAuthController(controller *Controller) *AuthController {
 // @Success 201 {object} TokenResponse "Resposta de login"
 // @Router /api/auth/login [post]
 func (ac *AuthController) Login(c *fiber.Ctx) error {
+	start := time.Now()
 	req := requestsAuth.NewLoginRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.LoginRequestParams); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error(), ac.controller.Logger)
 	}
 
 	if err := req.Validate(); err != nil {
-		return helpers.ErrorResponse(c, fiber.StatusUnprocessableEntity, err)
+		return helpers.ErrorResponse(c, fiber.StatusUnprocessableEntity, err, ac.controller.Logger)
 	}
 
 	token, status, err := ac.authService.Login(req.LoginRequestParams)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	return c.Status(status).JSON(fiber.Map{
+	ac.controller.Logger.Info().Str("status", "sucesso").Int("codigo", 200).Msg("Login realizado com sucesso")
+
+	data := map[string]interface{}{
 		"token": token,
-	})
+	}
+
+	return helpers.SuccessResponseData(c, status, data, "Login realizado com sucesso", ac.controller.Logger, start)
 }
 
 // @Summary Registrar usuário (Step 1)
@@ -71,31 +74,35 @@ func (ac *AuthController) Login(c *fiber.Ctx) error {
 // @Success 201 {object} resources.UserResource "Usuário registrado"
 // @Router /api/auth/register_step1 [post]
 func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
+	start := time.Now()
+
 	req := requestsAuth.NewRegisterRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.RegisterRequestStep1); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error(), ac.controller.Logger)
 	}
 
 	if err := validator.New().Struct(req.RegisterRequestStep1); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error(), ac.controller.Logger)
 	}
 
 	user, err := ac.authService.RegisterUserStep1(req.RegisterRequestStep1)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
 	//envio de e-mail
 	err = ac.authService.SendValidationCodeEmail(user.Email)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+	data := map[string]interface{}{
 		"message": "Foi enviado um código de validação para seu e-mail. Você tem até 30 minutos para o validar",
-		"data":    resources.Transform(user),
-	})
+		"user":    resources.Transform(user),
+	}
+
+	return helpers.SuccessResponseData(c, 200, data, "Primeira etapa do cadastro confirmada com sucesso", ac.controller.Logger, start)
 }
 
 // @Summary Registrar usuário (Step 2)
@@ -107,26 +114,29 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 // @Success 200 {object} resources.UserResource "Senha definida"
 // @Router /api/auth/register_step2 [post]
 func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
+	start := time.Now()
 	req := requestsAuth.NewRegisterRequest(ac.controller.DB)
 
 	if err := c.BodyParser(&req.RegisterRequestStep2); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusBadRequest, err.Error(), ac.controller.Logger)
 	}
 
 	if err := validator.New().Struct(req.RegisterRequestStep2); err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error(), ac.controller.Logger)
 	}
 
 	response, status, err := ac.authService.RegisterUserStep2(req.RegisterRequestStep2)
 	if err != nil {
-		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+		return helpers.ErrorResponseString(c, fiber.StatusUnprocessableEntity, err.Error(), ac.controller.Logger)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	data := map[string]interface{}{
 		"message": "Senha definida com sucesso!",
 		"token":   response.Token,
-		"data":    resources.Transform(response.User),
-	})
+		"users":   resources.Transform(response.User),
+	}
+
+	return helpers.SuccessResponseData(c, status, data, "Segunda etapa do cadastro confirmada com sucesso", ac.controller.Logger, start)
 }
 
 // @Summary Envia código de validação
@@ -136,6 +146,7 @@ func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]string "Código enviado" example="{\"message\": \"Código enviado com sucesso\"}"
 // @Router /api/auth/send-validation-code [post]
 func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
+	start := time.Now()
 
 	var dados map[string]string
 	err := c.BodyParser(&dados)
@@ -143,10 +154,10 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 
 	err = ac.authService.SendValidationCodeEmail(email)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error())
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso")
+	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso", ac.controller.Logger, start)
 }
 
 // @Summary Verifica código de validação
@@ -157,6 +168,7 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 // @Success 200 {object} object "Código validado com sucesso"
 // @Router /api/auth/verify-validation-code [post]
 func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
+	start := time.Now()
 	var dados map[string]string
 	err := c.BodyParser(&dados)
 	email := dados["email"]
@@ -167,9 +179,10 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return c.Status(status).JSON(fiber.Map{
+	data := map[string]interface{}{
 		"hash": hash,
-	})
+	}
+	return helpers.SuccessResponseData(c, status, data, "Código de validação confirmado com sucesso", ac.controller.Logger, start)
 }
 
 // @Summary Deslogar usuário
@@ -180,47 +193,46 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 // @Success 200 {object} object "Usuário deslogado com sucesso"
 // @Router /api/auth/logout [get]
 func (ac *AuthController) Logout(c *fiber.Ctx) error {
+	start := time.Now()
 	c.Locals("user", nil)
 	c.ClearCookie("token")
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Deslogado com sucesso"})
+	return helpers.SuccessResponseString(c, fiber.StatusOK, "Deslogado com sucesso", ac.controller.Logger, start)
 }
 
-func (ac *AuthController) RefreshToken(refreshTokenString string) (string, error) {
-    token, err := jwt.Parse(refreshTokenString, func(token *jwt.Token) (interface{}, error) {
-        return []byte(os.Getenv("JWT_KEY")), nil
-    })
+func (ac *AuthController) RefreshToken(refreshTokenString string, c *fiber.Ctx) (string, error) {
+	token, err := jwt.Parse(refreshTokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_KEY")), nil
+	})
 
-    if err != nil {
-        log.Println(err) // Registre o erro
-        return "", errors.New("token inválido")
-    }
+	if err != nil {
+		return "", helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
+	}
 
-    claims, ok := token.Claims.(jwt.MapClaims)
-    if !ok {
-        return "", errors.New("token inválido")
-    }
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
+	}
 
-    exp, ok := claims["exp"].(float64)
-    if !ok || time.Unix(int64(exp), 0).Before(time.Now()) {
-        return "", errors.New("token expirado")
-    }
+	exp, ok := claims["exp"].(float64)
+	if !ok || time.Unix(int64(exp), 0).Before(time.Now()) {
+		return "", helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
+	}
 
-    email, ok := claims["email"].(string)
-    if !ok {
-        return "", errors.New("claim 'email' não encontrada")
-    }
+	email, ok := claims["email"].(string)
+	if !ok {
+		return "", helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
+	}
 
-    // Gere novo token
-    newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "email": email,
-        "exp":   time.Now().Add(time.Hour * 1).Unix(),
-    })
+	// Gere novo token
+	newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": email,
+		"exp":   time.Now().Add(time.Hour * 1).Unix(),
+	})
 
-    newAccessTokenString, err := newAccessToken.SignedString([]byte(os.Getenv("JWT_KEY")))
+	newAccessTokenString, err := newAccessToken.SignedString([]byte(os.Getenv("JWT_KEY")))
 
-    return newAccessTokenString, err
+	return newAccessTokenString, err
 }
-
 
 // @Summary     Refresca o token de acesso
 // @Description Retorna um novo token de acesso válido por 1 hora
@@ -231,6 +243,7 @@ func (ac *AuthController) RefreshToken(refreshTokenString string) (string, error
 // @Success     200 {string} string "Novo token de acesso"
 // @Router      /api/auth/refresh-token [post]
 func (ac *AuthController) HandleRefreshToken(c *fiber.Ctx) error {
+	start := time.Now()
 	refreshTokenString := c.Get("Authorization")
 
 	// Remova o prefixo "Bearer " se necessário
@@ -238,11 +251,14 @@ func (ac *AuthController) HandleRefreshToken(c *fiber.Ctx) error {
 		refreshTokenString = strings.TrimSpace(refreshTokenString[7:])
 	}
 
-	newAccessToken, err := ac.RefreshToken(refreshTokenString)
+	newAccessToken, err := ac.RefreshToken(refreshTokenString, c)
 
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	return c.JSON(fiber.Map{"token": newAccessToken})
+	data := map[string]interface{}{
+		"token": newAccessToken,
+	}
+	return helpers.SuccessResponseData(c, 200, data, "Token gerado com sucesso", ac.controller.Logger, start)
 }

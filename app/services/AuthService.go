@@ -6,16 +6,18 @@ import (
 	"os"
 	"time"
 
+	"crypto/md5"
+	"encoding/hex"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
-	"crypto/md5"
-    "encoding/hex"
 
 	"tradeapi/app/mail"
 	"tradeapi/app/models"
 	"tradeapi/app/repositories"
-	 requestsAuth "tradeapi/app/requests/auth"
+	requestsAuth "tradeapi/app/requests/auth"
 	"tradeapi/utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
@@ -26,6 +28,7 @@ type Token struct {
 }
 
 type AuthService struct {
+    logger zerolog.Logger
 	authRepo *repositories.AuthRepository
 	userRepo *repositories.UserRepository
 	codeRepo *repositories.ValidationCodeRepository
@@ -38,12 +41,13 @@ type ResponseStep2 struct {
 }
 
 // NewAuthService cria uma nova instância do AuthService com o repositório injetado
-func NewAuthService(db *gorm.DB) *AuthService {
+func NewAuthService(db *gorm.DB, logger zerolog.Logger) *AuthService {
 	authRepo := repositories.NewAuthRepository(db)
 	userRepo := repositories.NewUserRepository(db)
 	codeRepo := repositories.NewValidationCodeRepository(db)
 	hashRepo := repositories.NewRegisterHashRepository(db)
 	return &AuthService{
+        logger: logger,
 		authRepo: authRepo,
 		userRepo: userRepo,
 		codeRepo: codeRepo,
@@ -75,9 +79,12 @@ func (s *AuthService) Login(params requestsAuth.LoginRequestParams) (string, int
 
 // RegisterUser registra um novo usuário
 func (s *AuthService) RegisterUserStep1(req requestsAuth.RegisterRequestStep1) (*models.User, error) {
+    logger := s.logger
+
     // Verifica se o e-mail já está registrado
     existingUser, err := s.userRepo.FindByEmail(req.Email)
     if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+        logger.Error().Err(err)
         return nil, err
     }
     if existingUser != nil {
@@ -93,6 +100,7 @@ func (s *AuthService) RegisterUserStep1(req requestsAuth.RegisterRequestStep1) (
     // Salva o usuário no banco
     user, err := s.authRepo.Create(userData)
     if err != nil {
+        logger.Error().Err(err)
         return nil, err
     }
 

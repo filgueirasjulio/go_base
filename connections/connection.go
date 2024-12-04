@@ -9,6 +9,7 @@ import (
 	"tradeapi/routes"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,7 +20,7 @@ type DB struct {
 }
 
 // GetDatabaseConnection cria e retorna uma conexão com o banco de dados usando o GORM
-func GetDatabaseConnection(app *fiber.App, ctx *cli.Context, cmdType string) error {
+func GetDatabaseConnection(app *fiber.App, ctx *cli.Context, cmdType string, logger zerolog.Logger) error {
 	// Obter configurações do ambiente
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
@@ -47,7 +48,7 @@ func GetDatabaseConnection(app *fiber.App, ctx *cli.Context, cmdType string) err
 		return fmt.Errorf("erro ao verificar conexão com o banco de dados: %v", err)
 	}
 
-	r := routes.NewRoute(db, app)
+	r := routes.NewRoute(db, app, logger)
 	r.SetupAPIRoutes()
 	executeCommands(db, cmdType, ctx)
 	
