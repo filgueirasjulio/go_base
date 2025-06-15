@@ -2,10 +2,10 @@ package services
 
 import (
 	"strconv"
-	"tradeapi/app/models"
-	"tradeapi/app/repositories"
-	requestsUser "tradeapi/app/requests/user"
-	"tradeapi/utils/helpers"
+	"base/app/models"
+	"base/app/repositories"
+	requestsUser "base/app/requests/user"
+	"base/utils/helpers"
 
 	"gorm.io/gorm"
 )

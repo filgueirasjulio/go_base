@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	queue "tradeapi/app"
-	"tradeapi/connections"
+	queue "base/app"
+	"base/connections"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -40,7 +40,7 @@ func init() {
 	// Carrega as variáveis do arquivo .env
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Erro ao carregar arquivo .env:", err)
+		log.Fatalf("Erro ao carregar arquivo .env: %v", err)
 	}
 
 	//iniciar fila
@@ -51,7 +51,7 @@ func init() {
 
 func main() {
 	cmd := &cli.App{
-		Name:        "Tradeapi",
+		Name:        "base",
 		Usage:       "Versão de Desenvolvimento",
 		Version:     "1.0.0",
 		UsageText:   "Rode main [global options] command [command options] [arguments...]",
@@ -64,7 +64,7 @@ func main() {
 					// Conectar ao banco e rodar o serviço
 					app, err := Teste(app, ctx, "run", zeroLog)
 					if err != nil {
-						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+						log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 					}
 
 					Run(app)
@@ -77,7 +77,7 @@ func main() {
 				Action: func(ctx *cli.Context) error {
 					_, err := Teste(app, ctx, "test", zeroLog)
 					if err != nil {
-						log.Fatal("Falha no teste de conexão:", err)
+						log.Fatalf("Falha no teste de conexão: %v", err)
 					}
 
 					log.Println("Conexão com o banco de dados foi bem-sucedida!")
@@ -90,7 +90,7 @@ func main() {
 				Action: func(ctx *cli.Context) error {
 					_, err := Teste(app, ctx, "migrate", zeroLog)
 					if err != nil {
-						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+						log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 					}
 
 					log.Println("Conexão com o banco de dados foi bem-sucedida!")
@@ -112,7 +112,7 @@ func main() {
 					// Estabelecendo a conexão com o banco
 					_, err := Teste(app, ctx, "seed", zeroLog)
 					if err != nil {
-						log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+						log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 					}
 					return nil
 				},
@@ -120,7 +120,7 @@ func main() {
 		},
 		Compiled:  time.Now(),
 		Authors:   []*cli.Author{},
-		Copyright: fmt.Sprintf("© %d Tradeapi - todos direitos reservados", time.Now().Year()),
+		Copyright: fmt.Sprintf("© %d Go Base - todos direitos reservados", time.Now().Year()),
 	}
 
 	cmd.Run(os.Args)
@@ -132,7 +132,7 @@ func Teste(app *fiber.App, c *cli.Context, cmdType string, logger zerolog.Logger
 
 	err := connections.GetDatabaseConnection(app, c, cmdType, logger)
 	if err != nil {
-		log.Fatal("Erro ao conectar ao banco de dados: %v", err)
+		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
 
 	elapsedTime := time.Since(startTime)
@@ -153,7 +153,7 @@ func Run(app *fiber.App) {
 	go func() {
 		fmt.Printf("Servidor rodando na porta %s...\n", port)
 		if err := app.Listen(":" + port); err != nil {
-			log.Fatal("Erro ao rodar o servidor:", err)
+			log.Fatalf("Erro ao rodar o servidor: %v", err)
 			return
 		}
 	}()
@@ -165,7 +165,7 @@ func Run(app *fiber.App) {
 	<-interrupt
 
 	if err := app.Shutdown(); err != nil {
-		log.Fatal("Erro ao encerrar servidor:", err)
+		log.Fatalf("Erro ao encerrar servidor: %v", err)
 		return
 	}
 

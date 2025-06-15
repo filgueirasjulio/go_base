@@ -1,5 +1,7 @@
 tmp/
 .env
-tradeapi
+base
 /docs
 /logs
+.air.toml
+base.exe

@@ -9,10 +9,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 
-	requestsAuth "tradeapi/app/requests/auth"
-	"tradeapi/app/resources"
-	"tradeapi/app/services"
-	"tradeapi/utils/helpers"
+	requestsAuth "base/app/requests/auth"
+	"base/app/resources"
+	"base/app/services"
+	"base/utils/helpers"
 )
 
 type TokenResponse struct {

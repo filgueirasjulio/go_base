@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"tradeapi/database/migrations"
-	"tradeapi/database/seeds"
-	"tradeapi/routes"
+	"base/database/migrations"
+	"base/database/seeds"
+	"base/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"

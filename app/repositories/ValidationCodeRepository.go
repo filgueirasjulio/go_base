@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"tradeapi/app/models"
+	"base/app/models"
 	"fmt"
 	"gorm.io/gorm"
 )

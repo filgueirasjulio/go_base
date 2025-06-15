@@ -14,11 +14,11 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
-	"tradeapi/app/mail"
-	"tradeapi/app/models"
-	"tradeapi/app/repositories"
-	requestsAuth "tradeapi/app/requests/auth"
-	"tradeapi/utils/helpers"
+	"base/app/mail"
+	"base/app/models"
+	"base/app/repositories"
+	requestsAuth "base/app/requests/auth"
+	"base/utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
 )

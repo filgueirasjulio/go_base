@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"tradeapi/app/controllers"
-	"tradeapi/config"
-	_ "tradeapi/utils/docs"
+	"base/app/controllers"
+	"base/config"
+	_ "base/utils/docs"
 
 	"github.com/gofiber/fiber/v2"
 	fiberSwagger "github.com/gofiber/swagger"
@@ -25,13 +25,13 @@ func NewRoute(db *gorm.DB, app *fiber.App, logger zerolog.Logger) *Route {
 	}
 }
 
-// @title TradeAPI
+// @title BaseGo
 // @version 1.0
 // @description API de exemplo para documentação com Swagger
 // @termsOfService http://swagger.io/terms/
 // @contact.name Suporte
-// @contact.url http://www.tradeapi.com/support
-// @contact.email suporte@tradeapi.com
+// @contact.url http://www.basego.com/support
+// @contact.email suporte@basego.com
 // @license.name MIT
 // @license.url http://opensource.org/licenses/MIT
 // @host localhost:3000

@@ -1,7 +1,7 @@
 package factories
 
 import (
-	"tradeapi/app/models"
+	"base/app/models"
 	"github.com/bxcodec/faker/v3"
 	"golang.org/x/crypto/bcrypt"
 	"log"

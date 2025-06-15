@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"tradeapi/app"
+	"base/app"
 	"os"
 	"time"
 	"net/smtp"

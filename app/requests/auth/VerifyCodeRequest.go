@@ -3,7 +3,7 @@ package auth
 import (
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
-    "tradeapi/app/requests"
+    "base/app/requests"
 )
 
 type VerifyCodeRequestParams struct {

@@ -48,7 +48,7 @@ func NewValidationCodeMail(to, nome, codigo string, isActive bool) *Mail {
 
 	mail := &Mail{
 		To:      to,
-		Subject: "Código de Validação - Tradeapi",
+		Subject: "Código de Validação - BaseGo",
 		Body:    buf.String(),
 	}
 

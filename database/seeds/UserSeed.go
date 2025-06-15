@@ -2,7 +2,7 @@ package seeds
 
 import (
 	"log"
-	"tradeapi/database/factories"
+	"base/database/factories"
 	"gorm.io/gorm"
 )
 

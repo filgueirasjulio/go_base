@@ -1,4 +1,4 @@
-﻿## TradeApi
+﻿## BaseGo
 ================
 
 ## Como Usar
@@ -15,13 +15,13 @@
 -   **Clonar repositório**
     
 ```
-git clone https://github.com/Tfos-Software/tradeapi.git
+git clone https://github.com/filgueirasjulio/base.git
 ```
 
 -   **Entrar no diretório**
     
 ```
-cd tradeapi
+cd base
 ```
 
 -   **Configurar ambiente**
@@ -45,23 +45,23 @@ go build
 -   **Migrar banco de dados**   
 
 ```
-./tradeapi migrate
+./base migrate
 ```
 
 -   **Popular banco de dados com dados de exemplo**
     - todas as seeds
 ```
-./tradeapi seed 
+./base seed 
 ```
     - seed de um metodo específico
 ```
-./tradeapi seed --model=User
+./base seed --model=User
 ```
 
 -   **Iniciar aplicação**
     
 ```
-./tradeapi run
+./base run
 ```
 
 ## Testar API

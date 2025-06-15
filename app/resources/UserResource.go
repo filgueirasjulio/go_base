@@ -2,8 +2,8 @@ package resources
 
 import (
 	"github.com/iancoleman/orderedmap"
-	"tradeapi/app/models"
-	"tradeapi/utils/helpers"
+	"base/app/models"
+	"base/utils/helpers"
 )
 
 // Transform transforma um modelo User em um UserResource

@@ -1,7 +1,7 @@
 package User
 
 import (
-	"tradeapi/app/requests"
+	"base/app/requests"
 
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"

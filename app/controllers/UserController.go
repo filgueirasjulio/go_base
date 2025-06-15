@@ -5,10 +5,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"strconv"
 	"time"
-	requestsUser "tradeapi/app/requests/user"
-	"tradeapi/app/resources"
-	"tradeapi/app/services"
-	"tradeapi/utils/helpers"
+	requestsUser "base/app/requests/user"
+	"base/app/resources"
+	"base/app/services"
+	"base/utils/helpers"
 )
 
 type UserController struct {

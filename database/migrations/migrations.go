@@ -5,8 +5,8 @@ import (
 	"gorm.io/gorm"
 	"reflect"
 
-	"tradeapi/app/models"
-	"tradeapi/utils/helpers"
+	"base/app/models"
+	"base/utils/helpers"
 )
 
 type Migration struct {
