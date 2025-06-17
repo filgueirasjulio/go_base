@@ -22,6 +22,7 @@ import (
 )
 
 var app *fiber.App
+var ctx *cli.Context
 var zeroLog zerolog.Logger
 
 
@@ -47,6 +48,20 @@ func init() {
 	capacity, _ := strconv.Atoi(os.Getenv("QUEUE_CAPACITY"))
 
 	queue.InitQueue(capacity)
+
+	//conectar ao banco
+	Teste(app, ctx, "test", zeroLog);
+
+	port := os.Getenv("APP_PORT")
+    if port == "" {
+        port = "3000" 
+    }
+
+    log.Printf("Servidor rodando na porta %s...", port)
+
+    if err := app.Listen(":" + port); err != nil {
+        log.Fatalf("Erro ao iniciar servidor: %v", err)
+    }
 }
 
 func main() {
@@ -55,7 +70,7 @@ func main() {
 		Usage:       "Versão de Desenvolvimento",
 		Version:     "1.0.0",
 		UsageText:   "Rode main [global options] command [command options] [arguments...]",
-		Description: "Api de trade",
+		Description: "Base para desenvolvimento em Go",
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
@@ -177,7 +192,6 @@ func Run(app *fiber.App) {
 	zeroLog.Info().Msg("✅ Servidor finalizado") 
 	zeroLog.Info().Msgf("Tempo de execução: %s",  elapsedTime)
 }
-
 
 func initLogger() {
     logsDir := "logs"

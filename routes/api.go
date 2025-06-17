@@ -2,7 +2,7 @@ package routes
 
 import (
 	"base/app/controllers"
-	"base/config"
+	"base/app/middlewares"
 	_ "base/utils/docs"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,14 +50,14 @@ func (r *Route) SetupAPIRoutes() {
 
 	/* Rotas de autenticação */
 	authController := controllers.NewAuthController(controllerBase)
-	auth := api.Group("/auth/")
+	auth := api.Group("/auth")
 	{
 		auth.Post("/login", authController.Login)
 		auth.Post("/register_step_1", authController.RegisterStep1)
 		auth.Post("/register_step_2", authController.RegisterStep2)
 		auth.Post("/send-validation-code", authController.SendValidationCode)
 		auth.Post("/verify-validation-code", authController.VerifyValidationCode)
-		auth.Use(config.Middleware(r.DB))
+		auth.Use(middlewares.Middleware(r.DB))
 		{
 			auth.Get("/logout", authController.Logout)
 			auth.Post("/refresh-token", authController.HandleRefreshToken)
@@ -68,7 +68,7 @@ func (r *Route) SetupAPIRoutes() {
 	/* Rotas de usuários */
 	userController := controllers.NewUserController(controllerBase)
 	users := api.Group("/users")
-	users.Use(config.Middleware(r.DB))
+	users.Use(middlewares.Middleware(r.DB))
 	{
 		users.Get("/", userController.Index)
 		users.Get("/:id", userController.Show)

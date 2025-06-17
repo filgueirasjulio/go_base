@@ -60,18 +60,18 @@ func (s *AuthService) Login(params requestsAuth.LoginRequestParams) (string, int
     // Verifica se o usuário existe
     user, err := s.userRepo.FindByEmail(params.Email)
     if err != nil || user.ID == 0 {
-        return "", 404, errors.New("login - erro ao buscar usuário")
+        return "", 404, errors.New(helpers.ErrUserBadRequest)
     }
 
     // Verifica senha
     if !helpers.VerifyPassword(user.Password, params.Password) {
-        return "", 401, errors.New("usuário ou senha inválidos")
+        return "", 401, errors.New(helpers.ErrUserOrPasswordInvalid)
     }
 
     // Gera token
     token, err := s.GenerateToken(user.Email, params.Password)
     if err != nil {
-        return "", 500, errors.New("login - erro ao gerar token")
+        return "", 500, errors.New(helpers.ErrTokenMalformed)
     }
 
     return token, 200, nil
@@ -88,7 +88,7 @@ func (s *AuthService) RegisterUserStep1(req requestsAuth.RegisterRequestStep1) (
         return nil, err
     }
     if existingUser != nil {
-        return nil, errors.New("e-mail já registrado")
+        return nil, errors.New(helpers.ErrUserHasAlreadyBeenRegistered)
     }
 
     // Cria o novo usuário sem senha
@@ -111,33 +111,33 @@ func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (
 	registerHash, err := s.hashRepo.GetLastHash(req.Hash)
 
     if err != nil && err.Error() != "record not found" {
-        return nil, 500, errors.New("erro ao buscar o código de validação no banco")
+        return nil, 500, errors.New(helpers.ErrValidationCodeError)
     }
 
     if registerHash == nil || registerHash.Hash == "" || registerHash.ExpiresAt.IsZero() {
-        return nil, 404, errors.New("código de validação não encontrado")
+        return nil, 404, errors.New(helpers.ErrValidationCodeNoteFound)
     }
 
     if registerHash.Hash != req.Hash {
-        return nil, 404, errors.New("código inválido")
+        return nil, 404, errors.New(helpers.ErrValidationCodeInvalid)
     }
 
     if time.Now().After(registerHash.ExpiresAt) {
-        return nil, 403, errors.New("código expirado, gere um novo")
+        return nil, 403, errors.New(helpers.ErrValidationCodeExpired)
     }
 
     user, err := s.userRepo.FindByHash(req.Hash)
     if err != nil {
-        return nil, 500, errors.New("error ao buscar usuário")
+        return nil, 500, errors.New(helpers.ErrUserBadRequest)
     }
     if user == nil {
-        return nil, 404, errors.New("usuário não encontrado")
+        return nil, 404, errors.New(helpers.ErrUserNotFound)
     }
 
     // Cria o hash da senha
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
     if err != nil {
-        return nil, 500, errors.New("falha ao gerar o hash da senha")
+        return nil, 500, errors.New(helpers.ErrHashNotGenerated)
     }
 
     // Atualiza a senha do usuário
@@ -148,12 +148,12 @@ func (s *AuthService) RegisterUserStep2(req requestsAuth.RegisterRequestStep2) (
     // Salva as alterações
     _, err = s.userRepo.Update(user)
     if err != nil {
-        return nil, 500, errors.New("erro au atualizar o password do usuário")
+        return nil, 500, errors.New(helpers.ErrPassordNotUpdated)
     }
 
 	token, err := s.GenerateToken(user.Email, user.Password)
     if err != nil {
-        return nil, 500, errors.New("erro ao gerar token")
+        return nil, 500, errors.New(helpers.ErrTokenNotGenerated)
 	}
 
     return &ResponseStep2{User: user, Token: token}, 200, nil
@@ -167,7 +167,7 @@ func (s *AuthService) SendValidationCodeEmail(email string) error {
 		return err
 	}
 	if user == nil {
-		return errors.New("usuário não encontrado")
+		return errors.New(helpers.ErrUserNotFound)
 	}
 
 	code := helpers.GenerateValidationCode()
@@ -180,7 +180,7 @@ func (s *AuthService) SendValidationCodeEmail(email string) error {
 
 	validationCode, err := s.codeRepo.Create(validationCodeData)
 	if err != nil {
-		return errors.New("falha ao registrar código de validação")
+		return errors.New(helpers.ErrValidationCodeNotRegistered)
 	}
 
 	mail.NewValidationCodeMail(user.Email, user.Name, validationCode.Code, user.IsActive,)
@@ -193,25 +193,25 @@ func (s *AuthService) VerifyValidationCode(c *fiber.Ctx, email, code string) (st
     validationCode, err := s.codeRepo.GetLastCodeByUserEmail(email)
 
     if err != nil && err.Error() != "record not found" {
-        return "", 500, errors.New("erro ao buscar o código de validação no banco")
+        return "", 500, errors.New(helpers.ErrValidationCodeError)
     }
 
     if validationCode == nil || validationCode.Code == "" || validationCode.ExpiresAt.IsZero() {
-        return "", 404, errors.New("código de validação não encontrado")
+        return "", 404, errors.New(helpers.ErrValidationCodeNoteFound)
     }
 
     if code != validationCode.Code {
-        return "", 404, errors.New("código inválido")
+        return "", 404, errors.New(helpers.ErrValidationCodeInvalid)
     }
 
     if time.Now().After(validationCode.ExpiresAt) {
-        return "", 403, errors.New("código expirado, gere um novo")
+        return "", 403, errors.New(helpers.ErrValidationCodeExpired)
     }
 
     // Marca o código como validado e deleta
     err = s.codeRepo.DeleteCodeByUserEmail(email)
     if err != nil {
-        return "", 500, fmt.Errorf("Falha ao deletar o código de validação")
+        return "", 500, fmt.Errorf(helpers.ErrValidationCodeNotDeleted)
     }
 
     // Gera hash MD5
@@ -230,7 +230,7 @@ func (s *AuthService) VerifyValidationCode(c *fiber.Ctx, email, code string) (st
     // Salva hash temporário
     _, err = s.authRepo.CreateHash(&registerHash)
     if err != nil {
-        return "", 500, errors.New("Falha ao salvar hash temporário")
+        return "", 500, errors.New(helpers.ErrTemporaryHashNotRegistered)
     }
 
     return hashMD5, 200, nil
@@ -258,7 +258,7 @@ func (s *AuthService) GenerateToken(email string, senha string) (string, error) 
     // Geração do token com assinatura
     tokenString, err := token.SignedString([]byte(secretKey))
     if err != nil {
-        return "", errors.New("erro ao gerar token")
+        return "", errors.New(helpers.ErrTokenNotGenerated)
     }
 
     return tokenString, nil

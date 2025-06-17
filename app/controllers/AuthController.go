@@ -56,13 +56,13 @@ func (ac *AuthController) Login(c *fiber.Ctx) error {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	ac.controller.Logger.Info().Str("status", "sucesso").Int("codigo", 200).Msg("Login realizado com sucesso")
+	ac.controller.Logger.Info().Str("status", "sucesso").Int("codigo", 200).Msg(helpers.LoginSuccessfull)
 
 	data := map[string]interface{}{
 		"token": token,
 	}
 
-	return helpers.SuccessResponseData(c, status, data, "Login realizado com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseData(c, status, data, helpers.LoginSuccessfull, ac.controller.Logger, start)
 }
 
 // @Summary Registrar usuário (Step 1)
@@ -98,11 +98,11 @@ func (ac *AuthController) RegisterStep1(c *fiber.Ctx) error {
 	}
 
 	data := map[string]interface{}{
-		"message": "Foi enviado um código de validação para seu e-mail. Você tem até 30 minutos para o validar",
+		"message": helpers.ValidationCodeSent,
 		"user":    resources.Transform(user),
 	}
 
-	return helpers.SuccessResponseData(c, 200, data, "Primeira etapa do cadastro confirmada com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseData(c, 200, data, helpers.RegisterFirstStep, ac.controller.Logger, start)
 }
 
 // @Summary Registrar usuário (Step 2)
@@ -131,12 +131,12 @@ func (ac *AuthController) RegisterStep2(c *fiber.Ctx) error {
 	}
 
 	data := map[string]interface{}{
-		"message": "Senha definida com sucesso!",
+		"message": helpers.PasswordDefined,
 		"token":   response.Token,
 		"users":   resources.Transform(response.User),
 	}
 
-	return helpers.SuccessResponseData(c, status, data, "Segunda etapa do cadastro confirmada com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseData(c, status, data, helpers.RegisterSecondStep, ac.controller.Logger, start)
 }
 
 // @Summary Envia código de validação
@@ -157,7 +157,7 @@ func (ac *AuthController) SendValidationCode(c *fiber.Ctx) error {
 		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, err.Error(), ac.controller.Logger)
 	}
 
-	return helpers.SuccessResponseString(c, fiber.StatusOK, "Código enviado com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseString(c, fiber.StatusOK, helpers.ValidationCodeSentShort, ac.controller.Logger, start)
 }
 
 // @Summary Verifica código de validação
@@ -182,7 +182,7 @@ func (ac *AuthController) VerifyValidationCode(c *fiber.Ctx) error {
 	data := map[string]interface{}{
 		"hash": hash,
 	}
-	return helpers.SuccessResponseData(c, status, data, "Código de validação confirmado com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseData(c, status, data, helpers.ValidationCodeConfirmed, ac.controller.Logger, start)
 }
 
 // @Summary Deslogar usuário
@@ -196,7 +196,7 @@ func (ac *AuthController) Logout(c *fiber.Ctx) error {
 	start := time.Now()
 	c.Locals("user", nil)
 	c.ClearCookie("token")
-	return helpers.SuccessResponseString(c, fiber.StatusOK, "Deslogado com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseString(c, fiber.StatusOK, helpers.LogoutSuccessfull, ac.controller.Logger, start)
 }
 
 func (ac *AuthController) RefreshToken(refreshTokenString string, c *fiber.Ctx) (string, error) {
@@ -260,5 +260,5 @@ func (ac *AuthController) HandleRefreshToken(c *fiber.Ctx) error {
 	data := map[string]interface{}{
 		"token": newAccessToken,
 	}
-	return helpers.SuccessResponseData(c, 200, data, "Token gerado com sucesso", ac.controller.Logger, start)
+	return helpers.SuccessResponseData(c, 200, data, helpers.TokenGenerated, ac.controller.Logger, start)
 }

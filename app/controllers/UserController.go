@@ -34,11 +34,11 @@ func (uc *UserController) Index(c *fiber.Ctx) error {
 
 	users, err := uc.userService.GetAllUsers()
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao listar usuários", uc.controller.Logger)
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, helpers.ErrUsersIndex, uc.controller.Logger)
 	}
 
 	if users == nil {
-		return helpers.SuccessResponseData(c, 200, map[string]interface{}{"users": []interface{}{}}, "Nenhum usuário encontrado", uc.controller.Logger, start)
+		return helpers.SuccessResponseData(c, 200, map[string]interface{}{"users": []interface{}{}}, helpers.ErrUsersNotFound, uc.controller.Logger, start)
 	}
 
 	// Transforma os usuários em recursos
@@ -50,7 +50,7 @@ func (uc *UserController) Index(c *fiber.Ctx) error {
 	}
 
 	// Retorna a resposta
-	return helpers.SuccessResponseData(c, 200, data, "Lista de usuários exibida com sucesso", uc.controller.Logger, start)
+	return helpers.SuccessResponseData(c, 200, data, helpers.UserIndex, uc.controller.Logger, start)
 }
 
 // @Summary Listar usuário
@@ -65,7 +65,7 @@ func (uc *UserController) Show(c *fiber.Ctx) error {
 
 	user, err := uc.userService.FindById(id)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao listar usuário", uc.controller.Logger)
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, helpers.ErrUserShow, uc.controller.Logger)
 	}
 
 	// Transformação do usuário
@@ -76,7 +76,7 @@ func (uc *UserController) Show(c *fiber.Ctx) error {
 		"users": transformedUser,
 	}
 
-	return helpers.SuccessResponseData(c, 200, data, "Usuário exibido com sucesso", uc.controller.Logger, start)
+	return helpers.SuccessResponseData(c, 200, data, helpers.UserShow, uc.controller.Logger, start)
 }
 
 // @Summary Atualizar usuário
@@ -102,7 +102,7 @@ func (uc *UserController) UpdateDetails(c *fiber.Ctx) error {
 
 	user, err := uc.userService.UpdateDetails(userId, req.UserUpdateDetailsRequestParams)
 	if err != nil {
-		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, "Erro ao atualizar usuário", uc.controller.Logger)
+		return helpers.ErrorResponseString(c, fiber.StatusInternalServerError, helpers.ErrUserUpdate, uc.controller.Logger)
 	}
 
 	userResources := resources.Transform(user)
@@ -111,5 +111,5 @@ func (uc *UserController) UpdateDetails(c *fiber.Ctx) error {
 		"users": c.JSON(userResources),
 	}
 
-	return helpers.SuccessResponseData(c, 200, data, "Usuário atualizado com sucesso", uc.controller.Logger, start)
+	return helpers.SuccessResponseData(c, 200, data, helpers.UserUpdate, uc.controller.Logger, start)
 }
